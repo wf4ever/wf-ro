@@ -57,7 +57,6 @@ public abstract class Wf2ROConverter
 
 	protected void deleteServiceAnnotations(URI rodlWfURI)
 	{
-		OntModel manifest = createManifestModel();
 	}
 
 
