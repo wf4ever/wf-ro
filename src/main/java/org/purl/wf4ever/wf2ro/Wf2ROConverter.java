@@ -22,7 +22,7 @@ public abstract class Wf2ROConverter
 	{
 		for (Workflow workflow : wfbundle.getWorkflows()) {
 			URI wfURI = workflow.getWorkflowIdentifier();
-			UUID wfUUID = UUID.fromString(wfURI.resolve("..").relativize(wfURI).toString());
+			UUID wfUUID = UUID.fromString(wfURI.resolve("..").relativize(wfURI).toASCIIString().replace("/", ""));
 			URI rodlWfURI = addWorkflow(wfUUID);
 			deleteServiceAnnotations(rodlWfURI);
 			addWfDescAnnotation(workflow, rodlWfURI);
