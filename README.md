@@ -1,4 +1,4 @@
-scufl2-ro
+wf-ro
 =========
 
 A service that converts Taverna workflows (scufl2, t2flow) to Research Objects
