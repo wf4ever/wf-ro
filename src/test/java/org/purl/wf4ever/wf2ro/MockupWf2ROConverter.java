@@ -20,6 +20,7 @@ import com.hp.hpl.jena.ontology.Individual;
 import com.hp.hpl.jena.ontology.OntModel;
 import com.hp.hpl.jena.ontology.OntModelSpec;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
+import com.hp.hpl.jena.rdf.model.Resource;
 
 public class MockupWf2ROConverter
 	extends Wf2ROConverter
@@ -79,6 +80,9 @@ public class MockupWf2ROConverter
 			log.error("Can't save the workflow bundle", e);
 		}
 		resources.put(wfURI, out);
+		Resource ro = manifest.createResource(roURI.toString());
+		Individual res = manifest.createIndividual(wfURI.toString(), Vocab.roResource);
+		ro.addProperty(Vocab.aggregates, res);
 		return wfURI;
 	}
 
