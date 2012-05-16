@@ -10,6 +10,13 @@ public class MockupWf2ROConverter
 	extends Wf2ROConverter
 {
 
+	public MockupWf2ROConverter(URI serviceURI)
+	{
+		super(serviceURI);
+		// TODO Auto-generated constructor stub
+	}
+
+
 	@Override
 	protected OutputStream createAnnotationBodyOutputStream(URI annotationBodyURI)
 	{

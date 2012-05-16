@@ -9,11 +9,11 @@ import java.net.URI;
 import java.util.UUID;
 
 import org.apache.log4j.Logger;
+import org.purl.wf4ever.rosrs.client.common.ROService;
 
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
 import uk.org.taverna.scufl2.api.io.WorkflowBundleIO;
 import uk.org.taverna.scufl2.api.io.WriterException;
-import uk.org.taverna.scufl2.wfdesc.WfdescSerialiser;
 
 import com.hp.hpl.jena.ontology.OntModel;
 
@@ -29,7 +29,15 @@ public abstract class Wf2ROConverter
 	private static final Logger log = Logger.getLogger(Wf2ROConverter.class);
 
 	private static WorkflowBundleIO bundleIO = new WorkflowBundleIO();
-	
+
+	protected URI serviceURI;
+
+
+	public Wf2ROConverter(URI serviceURI)
+	{
+		this.serviceURI = serviceURI;
+	}
+
 
 	/**
 	 * The conversion method. Note that there are no ROSRS parameters, since all ROSRS
@@ -86,69 +94,29 @@ public abstract class Wf2ROConverter
 	protected void addWfDescAnnotation(URI roURI, WorkflowBundle wfbundle, URI rodlWfURI)
 	{
 		OntModel manifest = createManifestModel(roURI);
-		URI annotationBodyURI = generateAnnotationBodyURI(roURI, rodlWfURI);
-		URI annotationURI = addAnnotation(roURI, manifest, rodlWfURI, annotationBodyURI);
+		URI annotationBodyURI = ROService.createAnnotationBodyURI(roURI, rodlWfURI);
+		URI annotationURI = ROService.createAnnotationURI(manifest, roURI);
+		ROService
+				.addAnnotationToManifestModel(manifest, roURI, annotationURI, rodlWfURI, annotationBodyURI, serviceURI);
 		uploadManifest(roURI, manifest);
 
 		OutputStream out = createAnnotationBodyOutputStream(annotationBodyURI);
-		
+
 		try {
 			bundleIO.writeBundle(wfbundle, out, "text/vnd.wf4ever.wfdesc+turtle");
 		}
 		catch (WriterException e) {
 			log.error("Can't write wfdesc description", e);
 			manifest = createManifestModel(roURI);
-			deleteAnnotation(roURI, manifest, annotationURI);
-			uploadManifest(roURI, manifest);
-		} catch (IOException e) {
-			log.error("Can't write wfdesc description", e);
-			manifest = createManifestModel(roURI);
-			deleteAnnotation(roURI, manifest, annotationURI);
+			ROService.deleteAnnotationFromManifest(manifest, annotationURI);
 			uploadManifest(roURI, manifest);
 		}
-	}
-
-
-	/**
-	 * Add an annotation to the manifest. You need to add the annotation body separately,
-	 * after uploading the manifest to RODL.
-	 * 
-	 * In the future should be done by the RODL and supported via ROSR API.
-	 * 
-	 * @param roURI
-	 *            research object URI
-	 * @param manifest
-	 *            the Jena model of the manifest
-	 * @param rodlWfURI
-	 *            workflow bundle URI as in the manifest. This will be the annotation
-	 *            target.
-	 * @param annotationBodyURI
-	 *            the URI of the annotation body that will be uploaded later
-	 * @return the annotation URI
-	 */
-	protected URI addAnnotation(URI roURI, OntModel manifest, URI rodlWfURI, URI annotationBodyURI)
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-
-	/**
-	 * Delete the annotation from the manifest. Does not delete the annotation body.
-	 * 
-	 * In the future should be done by the RODL and supported via ROSR API.
-	 * 
-	 * @param roURI
-	 *            research object URI
-	 * @param manifest
-	 *            the Jena model of the manifest
-	 * @param annotationURI
-	 *            the annotation URI
-	 */
-	protected void deleteAnnotation(URI roURI, OntModel manifest, URI annotationURI)
-	{
-		// TODO Auto-generated method stub
-
+		catch (IOException e) {
+			log.error("Can't write wfdesc description", e);
+			manifest = createManifestModel(roURI);
+			ROService.deleteAnnotationFromManifest(manifest, annotationURI);
+			uploadManifest(roURI, manifest);
+		}
 	}
 
 
@@ -207,26 +175,4 @@ public abstract class Wf2ROConverter
 	 */
 	protected abstract void uploadManifest(URI roURI, OntModel manifest);
 
-
-	/**
-	 * Generate a URI for an annotation body of a resource. The URI template is
-	 * ["ro"|resource_name] + "-" + random_string.
-	 * 
-	 * @param roURI
-	 *            research object URI
-	 * @param targetURI
-	 *            the annotation body target URI
-	 * @return an annotation body URI
-	 */
-	protected static URI generateAnnotationBodyURI(URI roURI, URI targetURI)
-	{
-		String targetName;
-		if (targetURI.equals(roURI))
-			targetName = "ro";
-		else
-			targetName = targetURI.resolve(".").relativize(targetURI).toString();
-		String randomBit = "" + Math.abs(UUID.randomUUID().getLeastSignificantBits());
-
-		return roURI.resolve(".ro/" + targetName + "-" + randomBit + ".rdf");
-	}
 }

@@ -2,6 +2,8 @@ package org.purl.wf4ever.wf2ro;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.junit.Test;
 
@@ -17,13 +19,13 @@ public class Wf2RoConverterTest
 
 	@Test
 	public void testConvert()
-		throws ReaderException, IOException
+		throws ReaderException, IOException, URISyntaxException
 	{
 		WorkflowBundleIO io = new WorkflowBundleIO();
 		InputStream helloWorld = getClass().getClassLoader().getResourceAsStream(helloWorldT2Flow);
 		WorkflowBundle wfbundle = io.readBundle(helloWorld, null);
 
-		Wf2ROConverter converter = new MockupWf2ROConverter();
+		Wf2ROConverter converter = new MockupWf2ROConverter(new URI("mockup"));
 		converter.convert(wfbundle);
 	}
 
