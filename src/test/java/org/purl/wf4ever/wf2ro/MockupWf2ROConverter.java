@@ -1,5 +1,6 @@
 package org.purl.wf4ever.wf2ro;
 
+import java.io.OutputStream;
 import java.net.URI;
 import java.util.UUID;
 
@@ -10,7 +11,7 @@ public class MockupWf2ROConverter
 {
 
 	@Override
-	public OntModel createManifestModel()
+	protected OutputStream createAnnotationBodyOutputStream(URI annotationBodyURI)
 	{
 		// TODO Auto-generated method stub
 		return null;
@@ -18,7 +19,7 @@ public class MockupWf2ROConverter
 
 
 	@Override
-	protected URI addWorkflow(UUID wfUUID)
+	protected OntModel createManifestModel(URI roURI)
 	{
 		// TODO Auto-generated method stub
 		return null;
@@ -26,10 +27,26 @@ public class MockupWf2ROConverter
 
 
 	@Override
-	protected URI getROURI()
+	protected URI createResearchObject(UUID wfUUID)
 	{
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+
+	@Override
+	protected URI addWorkflowBundle(URI roURI, UUID wfUUID)
+	{
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+
+	@Override
+	protected void uploadManifest(URI roURI, OntModel manifest)
+	{
+		// TODO Auto-generated method stub
+
 	}
 
 }
