@@ -3,6 +3,7 @@
  */
 package org.purl.wf4ever.wf2ro;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
 import java.util.UUID;
@@ -10,6 +11,7 @@ import java.util.UUID;
 import org.apache.log4j.Logger;
 
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
+import uk.org.taverna.scufl2.api.io.WorkflowBundleIO;
 import uk.org.taverna.scufl2.api.io.WriterException;
 import uk.org.taverna.scufl2.wfdesc.WfdescSerialiser;
 
@@ -26,6 +28,8 @@ public abstract class Wf2ROConverter
 
 	private static final Logger log = Logger.getLogger(Wf2ROConverter.class);
 
+	private static WorkflowBundleIO bundleIO = new WorkflowBundleIO();
+	
 
 	/**
 	 * The conversion method. Note that there are no ROSRS parameters, since all ROSRS
@@ -87,13 +91,17 @@ public abstract class Wf2ROConverter
 		uploadManifest(roURI, manifest);
 
 		OutputStream out = createAnnotationBodyOutputStream(annotationBodyURI);
-		WfdescSerialiser serializer = new WfdescSerialiser();
+		
 		try {
-			serializer.save(wfbundle, out);
+			bundleIO.writeBundle(wfbundle, out, "text/vnd.wf4ever.wfdesc+turtle");
 		}
 		catch (WriterException e) {
 			log.error("Can't write wfdesc description", e);
-
+			manifest = createManifestModel(roURI);
+			deleteAnnotation(roURI, manifest, annotationURI);
+			uploadManifest(roURI, manifest);
+		} catch (IOException e) {
+			log.error("Can't write wfdesc description", e);
 			manifest = createManifestModel(roURI);
 			deleteAnnotation(roURI, manifest, annotationURI);
 			uploadManifest(roURI, manifest);
