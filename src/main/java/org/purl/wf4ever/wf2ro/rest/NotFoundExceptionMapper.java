@@ -6,9 +6,9 @@ import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
 /**
- * Maps <code>IdNotFoundException</code> to <code>404 (Not Found)</code> HTTP response.
+ * Maps <code>NotFoundException</code> to <code>404 (Not Found)</code> HTTP response.
  * 
- * @author nowakm
+ * @author piotrekhol
  * 
  */
 @Provider

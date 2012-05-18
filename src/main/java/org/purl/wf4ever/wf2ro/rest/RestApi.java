@@ -7,6 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -64,11 +65,31 @@ public class RestApi
 	@Produces(MediaType.APPLICATION_JSON)
 	public JobStatus getJobStatus(@PathParam("uuid")
 	UUID uuid)
-		throws NotFoundException
+		throws NotFoundException, CancelledException
 	{
 		if (!jobs.containsKey(uuid)) {
 			throw new NotFoundException(uuid);
 		}
+		if (jobs.get(uuid).getStatus() == org.purl.wf4ever.wf2ro.rest.Job.Status.CANCELLED) {
+			throw new CancelledException(uuid);
+		}
+		return jobs.get(uuid).getJobStatus();
+	}
+
+
+	@DELETE
+	@Path("/{uuid}")
+	public JobStatus deleteJob(@PathParam("uuid")
+	UUID uuid)
+		throws NotFoundException, CancelledException
+	{
+		if (!jobs.containsKey(uuid)) {
+			throw new NotFoundException(uuid);
+		}
+		if (jobs.get(uuid).getStatus() == org.purl.wf4ever.wf2ro.rest.Job.Status.CANCELLED) {
+			throw new CancelledException(uuid);
+		}
+		jobs.get(uuid).cancel();
 		return jobs.get(uuid).getJobStatus();
 	}
 

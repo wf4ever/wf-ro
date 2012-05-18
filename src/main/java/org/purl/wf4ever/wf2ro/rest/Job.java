@@ -90,4 +90,12 @@ public class Job
 		return new JobStatus(resource, format, ro, status, converter.getResourcesAdded());
 	}
 
+
+	public void cancel()
+	{
+		//FIXME not sure if that's how we want to cancel this thread
+		this.interrupt();
+		this.status = Status.CANCELLED;
+	}
+
 }
