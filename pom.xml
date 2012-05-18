@@ -9,6 +9,7 @@
 	<description>Convert a t2flow workflow to an RO</description>
 	<properties>
 		<scufl2.version>0.9.2</scufl2.version>
+		<jersey.version>1.13-b01</jersey.version>
 	</properties>
 	<repositories>
 		<repository>
@@ -46,6 +47,17 @@
 			<groupId>org.purl.wf4ever</groupId>
 			<artifactId>rosrs-client-common</artifactId>
 			<version>1.0.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.sun.jersey.contribs</groupId>
+			<artifactId>jersey-multipart</artifactId>
+			<version>${jersey.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>servlet-api</artifactId>
+			<version>2.5</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>

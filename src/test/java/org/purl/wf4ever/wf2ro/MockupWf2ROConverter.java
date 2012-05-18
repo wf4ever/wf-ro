@@ -1,7 +1,6 @@
 package org.purl.wf4ever.wf2ro;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
 import java.util.HashMap;
@@ -12,9 +11,6 @@ import org.apache.log4j.Logger;
 import org.purl.wf4ever.rosrs.client.common.Vocab;
 
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
-import uk.org.taverna.scufl2.api.io.WorkflowBundleIO;
-import uk.org.taverna.scufl2.api.io.WriterException;
-import uk.org.taverna.scufl2.rdfxml.RDFXMLReader;
 
 import com.hp.hpl.jena.ontology.Individual;
 import com.hp.hpl.jena.ontology.OntModel;
@@ -26,11 +22,10 @@ public class MockupWf2ROConverter
 	extends Wf2ROConverter
 {
 
+	@SuppressWarnings("unused")
 	private static final Logger log = Logger.getLogger(MockupWf2ROConverter.class);
 
 	private Map<URI, OutputStream> resources = new HashMap<>();
-
-	private WorkflowBundleIO io = new WorkflowBundleIO();
 
 	private OntModel manifest = ModelFactory.createOntologyModel(OntModelSpec.OWL_LITE_MEM);
 
@@ -47,7 +42,7 @@ public class MockupWf2ROConverter
 
 
 	@Override
-	protected OutputStream createAnnotationBodyOutputStream(URI annotationBodyURI)
+	protected OutputStream createAggregatedResourceOutputStream(URI annotationBodyURI, String contentType)
 	{
 		resources.put(annotationBodyURI, new ByteArrayOutputStream());
 		return resources.get(annotationBodyURI);
@@ -71,15 +66,7 @@ public class MockupWf2ROConverter
 	@Override
 	protected URI addWorkflowBundle(URI roURI, WorkflowBundle wfbundle, UUID wfUUID)
 	{
-		URI wfURI = roURI.resolve(wfUUID.toString());
-		OutputStream out = new ByteArrayOutputStream();
-		try {
-			io.writeBundle(wfbundle, out, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
-		}
-		catch (WriterException | IOException e) {
-			log.error("Can't save the workflow bundle", e);
-		}
-		resources.put(wfURI, out);
+		URI wfURI = super.addWorkflowBundle(roURI, wfbundle, wfUUID);
 		Resource ro = manifest.createResource(roURI.toString());
 		Individual res = manifest.createIndividual(wfURI.toString(), Vocab.roResource);
 		ro.addProperty(Vocab.aggregates, res);
