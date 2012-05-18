@@ -14,6 +14,7 @@ import org.purl.wf4ever.rosrs.client.common.ROService;
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
 import uk.org.taverna.scufl2.api.io.WorkflowBundleIO;
 import uk.org.taverna.scufl2.api.io.WriterException;
+import uk.org.taverna.scufl2.rdfxml.RDFXMLReader;
 
 import com.hp.hpl.jena.ontology.OntModel;
 
@@ -64,6 +65,44 @@ public abstract class Wf2ROConverter
 
 
 	/**
+	 * Upload the workflow bundle to RODL.
+	 * 
+	 * @param roURI
+	 *            research object URI
+	 * @param wfbundle
+	 * @param wfUUID
+	 *            workflow bundle UUID
+	 * @return the workflow bundle URI as in the manifest
+	 */
+	protected URI addWorkflowBundle(URI roURI, WorkflowBundle wfbundle, UUID wfUUID)
+	{
+		URI wfURI = roURI.resolve(wfUUID.toString());
+
+		OutputStream out = null;
+		try {
+			out = createAggregatedResourceOutputStream(wfURI,
+				RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
+			bundleIO.writeBundle(wfbundle, out, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
+		}
+		catch (WriterException | IOException e) {
+			log.error("Can't upload workflow bundle", e);
+		}
+		finally {
+			try {
+				if (out != null) {
+					out.close();
+				}
+			}
+			catch (IOException e) {
+				log.warn("Exception when closing the annotation body output stream", e);
+			}
+		}
+		return wfURI;
+
+	}
+
+
+	/**
 	 * Generates and adds a workflow bundle history annotation using the roevo ontology.
 	 * 
 	 * @param roURI
@@ -100,22 +139,26 @@ public abstract class Wf2ROConverter
 				.addAnnotationToManifestModel(manifest, roURI, annotationURI, rodlWfURI, annotationBodyURI, serviceURI);
 		uploadManifest(roURI, manifest);
 
-		OutputStream out = createAnnotationBodyOutputStream(annotationBodyURI);
-
+		OutputStream out = null;
 		try {
+			out = createAggregatedResourceOutputStream(annotationBodyURI, "text/vnd.wf4ever.wfdesc+turtle");
 			bundleIO.writeBundle(wfbundle, out, "text/vnd.wf4ever.wfdesc+turtle");
 		}
-		catch (WriterException e) {
+		catch (WriterException | IOException e) {
 			log.error("Can't write wfdesc description", e);
 			manifest = createManifestModel(roURI);
 			ROService.deleteAnnotationFromManifest(manifest, annotationURI);
 			uploadManifest(roURI, manifest);
 		}
-		catch (IOException e) {
-			log.error("Can't write wfdesc description", e);
-			manifest = createManifestModel(roURI);
-			ROService.deleteAnnotationFromManifest(manifest, annotationURI);
-			uploadManifest(roURI, manifest);
+		finally {
+			try {
+				if (out != null) {
+					out.close();
+				}
+			}
+			catch (IOException e) {
+				log.warn("Exception when closing the annotation body output stream", e);
+			}
 		}
 	}
 
@@ -145,27 +188,16 @@ public abstract class Wf2ROConverter
 
 
 	/**
-	 * Upload the workflow bundle to RODL.
+	 * Create an output stream to which an aggregated resource can be saved. The output
+	 * stream will be closed after being used.
 	 * 
-	 * @param roURI
-	 *            research object URI
-	 * @param wfbundle
-	 * @param wfUUID
-	 *            workflow bundle UUID
-	 * @return the workflow bundle URI as in the manifest
-	 */
-	protected abstract URI addWorkflowBundle(URI roURI, WorkflowBundle wfbundle, UUID wfUUID);
-
-
-	/**
-	 * Create an output stream to which an annotation body can be saved. The output stream
-	 * will be closed after being used.
-	 * 
-	 * @param annotationBodyURI
-	 *            annotation body URI
+	 * @param resourceURI
+	 *            resource URI
 	 * @return the output stream
+	 * @throws IOException
 	 */
-	protected abstract OutputStream createAnnotationBodyOutputStream(URI annotationBodyURI);
+	protected abstract OutputStream createAggregatedResourceOutputStream(URI resourceURI, String contentType)
+		throws IOException;
 
 
 	/**
