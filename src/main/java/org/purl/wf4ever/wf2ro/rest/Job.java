@@ -54,6 +54,8 @@ public class Job
 		status = Status.RUNNING;
 
 		this.converter = new RodlConverter(service, ro, this.token);
+
+		setDaemon(true);
 	}
 
 
@@ -64,7 +66,7 @@ public class Job
 
 		status = Status.DONE;
 		try {
-			wait(EXPIRATION_PERIOD);
+			sleep(EXPIRATION_PERIOD);
 		}
 		catch (InterruptedException e) {
 			log.error("Wait interrupted", e);

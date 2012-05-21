@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
+import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -42,11 +43,29 @@ public class RestApi
 
 	@POST
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
-	public Response createJob(@FormDataParam("resource")
+	public Response createJobMultipartForm(@FormDataParam("resource")
 	URI resourceURI, @FormDataParam("format")
 	URI formatURI, @FormDataParam("ro")
 	URI roURI, @FormDataParam("token")
 	String token)
+	{
+		return createJob(resourceURI, formatURI, roURI, token);
+	}
+
+
+	@POST
+	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+	public Response createJobForm(@FormParam("resource")
+	URI resourceURI, @FormParam("format")
+	URI formatURI, @FormParam("ro")
+	URI roURI, @FormParam("token")
+	String token)
+	{
+		return createJob(resourceURI, formatURI, roURI, token);
+	}
+
+
+	private Response createJob(URI resourceURI, URI formatURI, URI roURI, String token)
 	{
 		if (jobs.size() >= MAX_JOBS) {
 			return Response.status(Status.SERVICE_UNAVAILABLE).build();
