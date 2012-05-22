@@ -12,6 +12,7 @@ import java.net.URI;
 import java.util.UUID;
 
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.MediaType;
 
 import org.junit.After;
 import org.junit.Test;
@@ -41,6 +42,9 @@ public class RestApiTest
 	private static final URI RO_URI = URI.create("http://sandbox.wf4ever-project.org/rosrs5/ROs/"
 			+ UUID.randomUUID().toString() + "/");
 
+	private static final URI RO2_URI = URI.create("http://sandbox.wf4ever-project.org/rosrs5/ROs/"
+			+ UUID.randomUUID().toString() + "/");
+
 	private static final Token TOKEN = new Token("47d5423c-b507-4e1c-8", null);
 
 	private static final long MAX_JOB_TIME_S = 60;
@@ -52,6 +56,7 @@ public class RestApiTest
 	public void tearDown()
 	{
 		ROSRService.deleteResearchObject(RO_URI, TOKEN);
+		ROSRService.deleteResearchObject(RO2_URI, TOKEN);
 	}
 
 
@@ -78,11 +83,30 @@ public class RestApiTest
 		f.add("ro", RO_URI);
 		f.add("token", TOKEN.getToken());
 
+		JobConfig config = new JobConfig(WF_URI, TAVERNA_FORMAT, RO2_URI, TOKEN.getToken());
+
 		ClientResponse response = webResource.path("jobs").post(ClientResponse.class, f);
 		assertEquals(HttpServletResponse.SC_CREATED, response.getStatus());
 		URI jobURI = response.getLocation();
 
+		ClientResponse response2 = webResource.path("jobs").type(MediaType.APPLICATION_JSON_TYPE)
+				.post(ClientResponse.class, config);
+		assertEquals(HttpServletResponse.SC_CREATED, response2.getStatus());
+		URI job2URI = response2.getLocation();
+
 		JobStatus status = null;
+
+		status = webResource.uri(job2URI).get(JobStatus.class);
+		assertTrue(status.getStatus() == Status.RUNNING || status.getStatus() == Status.DONE);
+		assertEquals(WF_URI, status.getResource());
+		assertEquals(TAVERNA_FORMAT, status.getFormat());
+		assertEquals(RO2_URI, status.getRo());
+
+		response2 = webResource.uri(job2URI).delete(ClientResponse.class);
+		assertEquals(HttpServletResponse.SC_NO_CONTENT, response2.getStatus());
+		response2 = webResource.uri(job2URI).get(ClientResponse.class);
+		assertEquals(HttpServletResponse.SC_GONE, response2.getStatus());
+
 		for (int i = 0; i < MAX_JOB_TIME_S; i++) {
 			System.out.print(".");
 			status = webResource.uri(jobURI).get(JobStatus.class);

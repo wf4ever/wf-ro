@@ -26,7 +26,12 @@ public class Job
 	private static final Logger log = Logger.getLogger(Job.class);
 
 	public enum Status {
-		RUNNING, DONE, CANCELLED, INVALID_RESOURCE, RUNTIME_ERROR
+		RUNNING, DONE, CANCELLED, INVALID_RESOURCE, RUNTIME_ERROR;
+
+		public String toString()
+		{
+			return this.toString().toLowerCase();
+		};
 	}
 
 	private static final long EXPIRATION_PERIOD = 600 * 1000;

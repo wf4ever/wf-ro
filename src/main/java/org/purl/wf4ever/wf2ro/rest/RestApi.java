@@ -65,6 +65,14 @@ public class RestApi
 	}
 
 
+	@POST
+	@Consumes(MediaType.APPLICATION_JSON)
+	public Response createJobJson(JobConfig config)
+	{
+		return createJob(config.getResource(), config.getFormat(), config.getRo(), config.getToken());
+	}
+
+
 	private Response createJob(URI resourceURI, URI formatURI, URI roURI, String token)
 	{
 		if (jobs.size() >= MAX_JOBS) {
@@ -98,7 +106,7 @@ public class RestApi
 
 	@DELETE
 	@Path("/{uuid}")
-	public JobStatus deleteJob(@PathParam("uuid")
+	public void cancelJob(@PathParam("uuid")
 	UUID uuid)
 		throws NotFoundException, CancelledException
 	{
@@ -109,7 +117,6 @@ public class RestApi
 			throw new CancelledException(uuid);
 		}
 		jobs.get(uuid).cancel();
-		return jobs.get(uuid).getJobStatus();
 	}
 
 
