@@ -19,8 +19,6 @@ import org.apache.log4j.Logger;
 import org.purl.wf4ever.rosrs.client.common.ROSRService;
 import org.scribe.model.Token;
 
-import uk.org.taverna.scufl2.rdfxml.RDFXMLReader;
-
 import com.hp.hpl.jena.ontology.OntModel;
 import com.sun.jersey.api.client.ClientResponse;
 
@@ -54,7 +52,7 @@ public class RodlConverter
 	@Override
 	protected URI createResearchObject(UUID wfUUID)
 	{
-		URI rodlURI = roURI.resolve("..");
+		URI rodlURI = roURI.resolve("../..");
 		String[] segments = roURI.getPath().split("/");
 		String roId = segments[segments.length - 1];
 		try {
@@ -78,7 +76,7 @@ public class RodlConverter
 	 * @see org.purl.wf4ever.wf2ro.Wf2ROConverter#createAnnotationBodyOutputStream(java.net.URI)
 	 */
 	@Override
-	protected OutputStream createAggregatedResourceOutputStream(final URI resourceURI, String contentType)
+	protected OutputStream createAggregatedResourceOutputStream(final URI resourceURI, final String contentType)
 		throws IOException
 	{
 		final PipedInputStream in = new PipedInputStream();
@@ -87,12 +85,11 @@ public class RodlConverter
 
 			public void run()
 			{
-				ClientResponse response = ROSRService.uploadResource(resourceURI, in,
-					RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE, rodlToken);
+				ClientResponse response = ROSRService.uploadResource(resourceURI, in, contentType, rodlToken);
 				if (response.getClientResponseStatus().getStatusCode() != HttpServletResponse.SC_OK
 						&& response.getClientResponseStatus().getStatusCode() != HttpServletResponse.SC_CREATED) {
-					throw new RuntimeException("Wrong response status when uploading an aggregated resource: "
-							+ response.getEntity(String.class));
+					throw new RuntimeException("Wrong response status when uploading an aggregated resource "
+							+ resourceURI + ": " + response.getEntity(String.class));
 				}
 			}
 		}).start();

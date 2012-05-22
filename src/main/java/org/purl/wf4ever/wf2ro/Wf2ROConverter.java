@@ -159,7 +159,8 @@ public abstract class Wf2ROConverter
 
 		OutputStream out = null;
 		try {
-			out = createAggregatedResourceOutputStream(annotationBodyURI, "text/vnd.wf4ever.wfdesc+turtle");
+			out = createAggregatedResourceOutputStream(annotationBodyURI, /*"text/vnd.wf4ever.wfdesc+turtle"*/
+				"text/turtle");
 			bundleIO.writeBundle(wfbundle, out, "text/vnd.wf4ever.wfdesc+turtle");
 			return annotationBodyURI;
 		}

@@ -19,6 +19,8 @@ import org.purl.wf4ever.rosrs.client.common.ROSRService;
 import org.purl.wf4ever.wf2ro.rest.Job.Status;
 import org.scribe.model.Token;
 
+import uk.org.taverna.scufl2.translator.t2flow.T2FlowReader;
+
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.representation.Form;
@@ -32,17 +34,16 @@ public class RestApiTest
 	extends JerseyTest
 {
 
-	private static final URI WF_URI = URI
-			.create("https://raw.github.com/wf4ever/scufl2-wfdesc/master/src/test/resources/helloworld.t2flow");
+	private static final URI WF_URI = URI.create("http://www.myexperiment.org/workflows/2648/download?version=1");
 
-	private static final URI TAVERNA_FORMAT = URI.create("http://taverna.sf.net/2008/xml/t2flow");
+	private static final URI TAVERNA_FORMAT = URI.create(T2FlowReader.APPLICATION_VND_TAVERNA_T2FLOW_XML);
 
 	private static final URI RO_URI = URI.create("http://sandbox.wf4ever-project.org/rosrs5/ROs/"
 			+ UUID.randomUUID().toString() + "/");
 
 	private static final Token TOKEN = new Token("47d5423c-b507-4e1c-8", null);
 
-	private static final long MAX_JOB_TIME_S = 20;
+	private static final long MAX_JOB_TIME_S = 60;
 
 	private WebResource webResource;
 
@@ -85,7 +86,6 @@ public class RestApiTest
 		for (int i = 0; i < MAX_JOB_TIME_S; i++) {
 			System.out.print(".");
 			status = webResource.uri(jobURI).get(JobStatus.class);
-			System.out.println(webResource.uri(jobURI).get(String.class));
 			assertTrue(status.getStatus() == Status.RUNNING || status.getStatus() == Status.DONE);
 			assertEquals(WF_URI, status.getResource());
 			assertEquals(TAVERNA_FORMAT, status.getFormat());
@@ -96,6 +96,7 @@ public class RestApiTest
 			}
 			Thread.sleep(1000);
 		}
+		System.out.println(webResource.uri(jobURI).get(String.class));
 		if (status.getStatus() == Status.RUNNING) {
 			fail("The job hasn't finished on time");
 		}
