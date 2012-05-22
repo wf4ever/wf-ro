@@ -74,7 +74,7 @@ public class RestApiTest
 			webResource = resource();
 		}
 		else {
-			webResource = resource().path("wf2ro/");
+			webResource = resource().path("wf-ro/");
 		}
 
 		Form f = new Form();
