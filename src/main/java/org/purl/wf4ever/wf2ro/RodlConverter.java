@@ -57,9 +57,11 @@ public class RodlConverter
 			List<URI> userROs = ROSRService.getROList(rodlURI, rodlToken);
 			if (!userROs.contains(roURI)) {
 				ClientResponse response = ROSRService.createResearchObject(rodlURI, roId, rodlToken);
-				if (response.getClientResponseStatus().getStatusCode() != HttpServletResponse.SC_CREATED) {
-					throw new RuntimeException("Wrong response status when creating an RO in RODL: "
-							+ response.getEntity(String.class));
+				int code = response.getClientResponseStatus().getStatusCode();
+				String body = response.getEntity(String.class);
+				response.close();
+				if (code != HttpServletResponse.SC_CREATED) {
+					throw new RuntimeException("Wrong response status when creating an RO in RODL: " + body);
 				}
 			}
 		}
@@ -78,10 +80,12 @@ public class RodlConverter
 		throws IOException
 	{
 		ClientResponse response = ROSRService.uploadResource(resourceURI, in, contentType, rodlToken);
-		if (response.getClientResponseStatus().getStatusCode() != HttpServletResponse.SC_OK
-				&& response.getClientResponseStatus().getStatusCode() != HttpServletResponse.SC_CREATED) {
+		int code = response.getClientResponseStatus().getStatusCode();
+		String body = response.getEntity(String.class);
+		response.close();
+		if (code != HttpServletResponse.SC_OK && code != HttpServletResponse.SC_CREATED) {
 			throw new RuntimeException("Wrong response status when uploading an aggregated resource " + resourceURI
-					+ ": " + response.getEntity(String.class));
+					+ ": " + body);
 		}
 	}
 
@@ -103,9 +107,11 @@ public class RodlConverter
 	protected void uploadManifest(URI roURI, OntModel manifest)
 	{
 		ClientResponse response = ROSRService.uploadManifestModel(roURI, manifest, rodlToken);
-		if (response.getClientResponseStatus().getStatusCode() != 200) {
-			throw new RuntimeException("Wrong response status when uploading the manifest model: "
-					+ response.getEntity(String.class));
+		int code = response.getClientResponseStatus().getStatusCode();
+		String body = response.getEntity(String.class);
+		response.close();
+		if (code != 200) {
+			throw new RuntimeException("Wrong response status when uploading the manifest model: " + body);
 		}
 	}
 

@@ -47,7 +47,7 @@ public class RestApiTest
 
 	private static final Token TOKEN = new Token("47d5423c-b507-4e1c-8", null);
 
-	private static final long MAX_JOB_TIME_S = 60;
+	private static final long MAX_JOB_TIME_S = 120;
 
 	private WebResource webResource;
 
@@ -88,11 +88,13 @@ public class RestApiTest
 		ClientResponse response = webResource.path("jobs").post(ClientResponse.class, f);
 		assertEquals(HttpServletResponse.SC_CREATED, response.getStatus());
 		URI jobURI = response.getLocation();
+		response.close();
 
 		ClientResponse response2 = webResource.path("jobs").type(MediaType.APPLICATION_JSON_TYPE)
 				.post(ClientResponse.class, config);
 		assertEquals(HttpServletResponse.SC_CREATED, response2.getStatus());
 		URI job2URI = response2.getLocation();
+		response2.close();
 
 		JobStatus status = null;
 
@@ -104,8 +106,10 @@ public class RestApiTest
 
 		response2 = webResource.uri(job2URI).delete(ClientResponse.class);
 		assertEquals(HttpServletResponse.SC_NO_CONTENT, response2.getStatus());
+		response2.close();
 		response2 = webResource.uri(job2URI).get(ClientResponse.class);
 		assertEquals(HttpServletResponse.SC_GONE, response2.getStatus());
+		response2.close();
 
 		for (int i = 0; i < MAX_JOB_TIME_S; i++) {
 			System.out.print(".");

@@ -111,9 +111,7 @@ public abstract class Wf2ROConverter
 					}
 					finally {
 						try {
-							if (out != null) {
-								out.close();
-							}
+							out.close();
 						}
 						catch (IOException e) {
 							log.warn("Exception when closing the workflow bundle output stream", e);
@@ -185,9 +183,7 @@ public abstract class Wf2ROConverter
 					}
 					finally {
 						try {
-							if (out != null) {
-								out.close();
-							}
+							out.close();
 						}
 						catch (IOException e) {
 							log.warn("Exception when closing the annotation body output stream", e);
