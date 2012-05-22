@@ -4,9 +4,7 @@
 package org.purl.wf4ever.wf2ro;
 
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -76,24 +74,15 @@ public class RodlConverter
 	 * @see org.purl.wf4ever.wf2ro.Wf2ROConverter#createAnnotationBodyOutputStream(java.net.URI)
 	 */
 	@Override
-	protected OutputStream createAggregatedResourceOutputStream(final URI resourceURI, final String contentType)
+	protected void uploadAggregatedResource(URI resourceURI, String contentType, InputStream in)
 		throws IOException
 	{
-		final PipedInputStream in = new PipedInputStream();
-		PipedOutputStream out = new PipedOutputStream(in);
-		new Thread(new Runnable() {
-
-			public void run()
-			{
-				ClientResponse response = ROSRService.uploadResource(resourceURI, in, contentType, rodlToken);
-				if (response.getClientResponseStatus().getStatusCode() != HttpServletResponse.SC_OK
-						&& response.getClientResponseStatus().getStatusCode() != HttpServletResponse.SC_CREATED) {
-					throw new RuntimeException("Wrong response status when uploading an aggregated resource "
-							+ resourceURI + ": " + response.getEntity(String.class));
-				}
-			}
-		}).start();
-		return out;
+		ClientResponse response = ROSRService.uploadResource(resourceURI, in, contentType, rodlToken);
+		if (response.getClientResponseStatus().getStatusCode() != HttpServletResponse.SC_OK
+				&& response.getClientResponseStatus().getStatusCode() != HttpServletResponse.SC_CREATED) {
+			throw new RuntimeException("Wrong response status when uploading an aggregated resource " + resourceURI
+					+ ": " + response.getEntity(String.class));
+		}
 	}
 
 

@@ -1,12 +1,13 @@
 package org.purl.wf4ever.wf2ro;
 
-import java.io.ByteArrayOutputStream;
-import java.io.OutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.purl.wf4ever.rosrs.client.common.Vocab;
 
@@ -25,7 +26,7 @@ public class MockupWf2ROConverter
 	@SuppressWarnings("unused")
 	private static final Logger log = Logger.getLogger(MockupWf2ROConverter.class);
 
-	private Map<URI, OutputStream> resources = new HashMap<>();
+	private Map<URI, String> resources = new HashMap<>();
 
 	private OntModel manifest = ModelFactory.createOntologyModel(OntModelSpec.OWL_LITE_MEM);
 
@@ -42,10 +43,10 @@ public class MockupWf2ROConverter
 
 
 	@Override
-	protected OutputStream createAggregatedResourceOutputStream(URI annotationBodyURI, String contentType)
+	protected void uploadAggregatedResource(URI annotationBodyURI, String contentType, InputStream in)
+		throws IOException
 	{
-		resources.put(annotationBodyURI, new ByteArrayOutputStream());
-		return resources.get(annotationBodyURI);
+		resources.put(annotationBodyURI, IOUtils.toString(in));
 	}
 
 
@@ -81,7 +82,7 @@ public class MockupWf2ROConverter
 	}
 
 
-	public Map<URI, OutputStream> getResources()
+	public Map<URI, String> getResources()
 	{
 		return resources;
 	}

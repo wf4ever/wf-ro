@@ -4,7 +4,9 @@
 package org.purl.wf4ever.wf2ro;
 
 import java.io.IOException;
-import java.io.OutputStream;
+import java.io.InputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -90,28 +92,39 @@ public abstract class Wf2ROConverter
 	 *            workflow bundle UUID
 	 * @return the workflow bundle URI as in the manifest
 	 */
-	protected URI addWorkflowBundle(URI roURI, WorkflowBundle wfbundle, UUID wfUUID)
+	protected URI addWorkflowBundle(URI roURI, final WorkflowBundle wfbundle, UUID wfUUID)
 	{
 		URI wfURI = roURI.resolve(wfUUID.toString());
 
-		OutputStream out = null;
 		try {
-			out = createAggregatedResourceOutputStream(wfURI,
-				RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
-			bundleIO.writeBundle(wfbundle, out, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
-		}
-		catch (WriterException | IOException e) {
-			log.error("Can't upload workflow bundle", e);
-		}
-		finally {
-			try {
-				if (out != null) {
-					out.close();
+			final PipedInputStream in = new PipedInputStream();
+			final PipedOutputStream out = new PipedOutputStream(in);
+			new Thread(new Runnable() {
+
+				public void run()
+				{
+					try {
+						bundleIO.writeBundle(wfbundle, out, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
+					}
+					catch (WriterException | IOException e) {
+						log.error("Can't download workflow bundle", e);
+					}
+					finally {
+						try {
+							if (out != null) {
+								out.close();
+							}
+						}
+						catch (IOException e) {
+							log.warn("Exception when closing the workflow bundle output stream", e);
+						}
+					}
 				}
-			}
-			catch (IOException e) {
-				log.warn("Exception when closing the annotation body output stream", e);
-			}
+			}).start();
+			uploadAggregatedResource(wfURI, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE, in);
+		}
+		catch (IOException e) {
+			log.error("Can't upload workflow bundle", e);
 		}
 		return wfURI;
 
@@ -148,7 +161,7 @@ public abstract class Wf2ROConverter
 	 *            the workflow bundle URI used in the research object
 	 * @return
 	 */
-	protected URI addWfDescAnnotation(URI roURI, WorkflowBundle wfbundle, URI rodlWfURI)
+	protected URI addWfDescAnnotation(URI roURI, final WorkflowBundle wfbundle, URI rodlWfURI)
 	{
 		OntModel manifest = createManifestModel(roURI);
 		URI annotationBodyURI = createAnnotationBodyURI(roURI, rodlWfURI);
@@ -157,29 +170,40 @@ public abstract class Wf2ROConverter
 				.addAnnotationToManifestModel(manifest, roURI, annotationURI, rodlWfURI, annotationBodyURI, serviceURI);
 		uploadManifest(roURI, manifest);
 
-		OutputStream out = null;
 		try {
-			out = createAggregatedResourceOutputStream(annotationBodyURI, /*"text/vnd.wf4ever.wfdesc+turtle"*/
-				"text/turtle");
-			bundleIO.writeBundle(wfbundle, out, "text/vnd.wf4ever.wfdesc+turtle");
+			final PipedInputStream in = new PipedInputStream();
+			final PipedOutputStream out = new PipedOutputStream(in);
+			new Thread(new Runnable() {
+
+				public void run()
+				{
+					try {
+						bundleIO.writeBundle(wfbundle, out, "text/vnd.wf4ever.wfdesc+turtle");
+					}
+					catch (WriterException | IOException e) {
+						log.error("Can't download workflow desc", e);
+					}
+					finally {
+						try {
+							if (out != null) {
+								out.close();
+							}
+						}
+						catch (IOException e) {
+							log.warn("Exception when closing the annotation body output stream", e);
+						}
+					}
+				}
+			}).start();
+			uploadAggregatedResource(annotationBodyURI, "text/turtle", in);
 			return annotationBodyURI;
 		}
-		catch (WriterException | IOException e) {
-			log.error("Can't write wfdesc description", e);
+		catch (IOException e) {
+			log.error("Can't upload annotation body", e);
 			manifest = createManifestModel(roURI);
 			ROService.deleteAnnotationFromManifest(manifest, annotationURI);
 			uploadManifest(roURI, manifest);
 			return null;
-		}
-		finally {
-			try {
-				if (out != null) {
-					out.close();
-				}
-			}
-			catch (IOException e) {
-				log.warn("Exception when closing the annotation body output stream", e);
-			}
 		}
 	}
 
@@ -217,7 +241,7 @@ public abstract class Wf2ROConverter
 	 * @return the output stream
 	 * @throws IOException
 	 */
-	protected abstract OutputStream createAggregatedResourceOutputStream(URI resourceURI, String contentType)
+	protected abstract void uploadAggregatedResource(URI resourceURI, String contentType, InputStream in)
 		throws IOException;
 
 
