@@ -1,6 +1,3 @@
-/**
- * 
- */
 package org.purl.wf4ever.wf2ro.rest;
 
 import java.io.IOException;
@@ -16,6 +13,8 @@ import uk.org.taverna.scufl2.api.io.ReaderException;
 import uk.org.taverna.scufl2.api.io.WorkflowBundleIO;
 
 /**
+ * Represents a conversion job. It runs in a separate thread.
+ * 
  * @author piotrekhol
  * 
  */
@@ -53,6 +52,23 @@ public class Job
 	private RodlConverter converter;
 
 
+	/**
+	 * 
+	 * @param service
+	 *            Service URI for the converter
+	 * @param jobUUID
+	 *            job identifier assigned by its container
+	 * @param resource
+	 *            URI of the workflow to be converted
+	 * @param format
+	 *            URI of workflow format
+	 * @param ro
+	 *            RO URI, for the converter
+	 * @param token
+	 *            RODL access token
+	 * @param container
+	 *            the object that created this job
+	 */
 	public Job(URI service, UUID jobUUID, URI resource, URI format, URI ro, String token, JobsContainer container)
 	{
 		this.uuid = jobUUID;
@@ -115,6 +131,9 @@ public class Job
 	}
 
 
+	/**
+	 * Cancel the job. The job is aborted but not undone.
+	 */
 	public void cancel()
 	{
 		//FIXME not sure if that's how we want to cancel this thread

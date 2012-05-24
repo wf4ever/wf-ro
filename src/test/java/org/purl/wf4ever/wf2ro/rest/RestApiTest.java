@@ -28,6 +28,18 @@ import com.sun.jersey.api.representation.Form;
 import com.sun.jersey.test.framework.JerseyTest;
 
 /**
+ * This test verifies the correctness of the REST API. It creates 2 jobs, one of which is
+ * cancelled. The other job is expected to finish in within predefined time, e.g. 120
+ * seconds.
+ * 
+ * This test can only be run as a maven run (goal=test) and requires run parameters, as
+ * described in http://jersey.java.net/nonav/documentation/latest/test-framework.html
+ * 
+ * To run the test using the embedded Grizzly 2 server, launched at run time, set:
+ * jersey.test.containerFactory =
+ * com.sun.jersey.test.framework.spi.container.grizzly2.GrizzlyTestContainerFactory
+ * jersey.test.port = 8080 (or other)
+ * 
  * @author piotrekhol
  * 
  */
@@ -47,6 +59,9 @@ public class RestApiTest
 
 	private static final Token TOKEN = new Token("47d5423c-b507-4e1c-8", null);
 
+	/**
+	 * Maximum time that the test waits for a job to finish. After that the test fails.
+	 */
 	private static final long MAX_JOB_TIME_S = 120;
 
 	private WebResource webResource;

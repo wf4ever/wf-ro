@@ -21,8 +21,9 @@ import com.hp.hpl.jena.ontology.OntModel;
 import com.sun.jersey.api.client.ClientResponse;
 
 /**
- * @author piotrekhol
+ * This class implements a Wf-RO converter uploading all created resources to the RODL.
  * 
+ * @author piotrekhol
  */
 public class RodlConverter
 	extends Wf2ROConverter
@@ -36,6 +37,14 @@ public class RodlConverter
 	private Token rodlToken;
 
 
+	/**
+	 * @param serviceURI
+	 *            The URI under which the conversion service is available
+	 * @param roURI
+	 *            research object URI, will be created if doesn't exist
+	 * @param rodlToken
+	 *            the RODL access token for updating the RO
+	 */
 	public RodlConverter(URI serviceURI, URI roURI, Token rodlToken)
 	{
 		super(serviceURI);

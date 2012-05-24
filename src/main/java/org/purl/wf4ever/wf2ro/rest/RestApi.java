@@ -22,6 +22,13 @@ import javax.ws.rs.core.UriInfo;
 
 import com.sun.jersey.multipart.FormDataParam;
 
+/**
+ * REST API as defined in
+ * http://www.wf4ever-project.org/wiki/display/docs/Wf-RO+transformation+service
+ * 
+ * @author piotrekhol
+ * 
+ */
 @Path("jobs")
 public class RestApi
 	implements JobsContainer

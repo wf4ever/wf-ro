@@ -20,6 +20,12 @@ import com.hp.hpl.jena.rdf.model.NodeIterator;
 import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.vocabulary.DCTerms;
 
+/**
+ * The test verifies correct conversion using a mockup converter
+ * 
+ * @author piotrekhol
+ * 
+ */
 public class Wf2RoConverterTest
 {
 

@@ -24,10 +24,11 @@ import uk.org.taverna.scufl2.rdfxml.RDFXMLReader;
 import com.hp.hpl.jena.ontology.OntModel;
 
 /**
+ * This class defines the main logic of workflow-RO conversion. It is abstract because it
+ * leaves the resource upload details to its subclasses.
+ * 
  * @author piotrekhol
  * 
- *         This class defines the main logic of workflow-RO conversion. It is abstract
- *         because it leaves the resource upload details to its subclasses.
  */
 public abstract class Wf2ROConverter
 {
@@ -41,6 +42,11 @@ public abstract class Wf2ROConverter
 	private List<URI> resourcesAdded = Collections.synchronizedList(new ArrayList<URI>());
 
 
+	/**
+	 * 
+	 * @param serviceURI
+	 *            The conversion service URI, used e.g. for authoring changes in metadata
+	 */
 	public Wf2ROConverter(URI serviceURI)
 	{
 		this.serviceURI = serviceURI;
@@ -59,17 +65,26 @@ public abstract class Wf2ROConverter
 	{
 		UUID wfUUID = getWorkflowBundleUUID(wfbundle);
 		URI roURI = createResearchObject(wfUUID);
-		URI wfURI = addWorkflowBundle(roURI, wfbundle, wfUUID);
-		if (wfURI != null) {
+		URI wfURI;
+		try {
+			wfURI = addWorkflowBundle(roURI, wfbundle, wfUUID);
 			resourcesAdded.add(wfURI);
 		}
-		URI wfdescURI = addWfDescAnnotation(roURI, wfbundle, wfURI);
-		if (wfdescURI != null) {
-			resourcesAdded.add(wfdescURI);
+		catch (IOException e) {
+			log.error("Can't upload workflow bundle", e);
+			return resourcesAdded;
 		}
-		URI evoURI = addRoEvoAnnotation(roURI, wfbundle, wfURI);
-		if (evoURI != null) {
-			resourcesAdded.add(evoURI);
+		try {
+			resourcesAdded.add(addWfDescAnnotation(roURI, wfbundle, wfURI));
+		}
+		catch (IOException e) {
+			log.error("Can't upload workflow desc", e);
+		}
+		try {
+			resourcesAdded.add(addRoEvoAnnotation(roURI, wfbundle, wfURI));
+		}
+		catch (IOException e) {
+			log.error("Can't upload RO evolution desc", e);
 		}
 		return resourcesAdded;
 	}
@@ -88,42 +103,41 @@ public abstract class Wf2ROConverter
 	 * @param roURI
 	 *            research object URI
 	 * @param wfbundle
+	 *            the workflow bundle
 	 * @param wfUUID
 	 *            workflow bundle UUID
-	 * @return the workflow bundle URI as in the manifest
+	 * @return the workflow bundle URI as in the manifest or null if uploading failed
+	 * @throws IOException
+	 *             when there was a problem with getting/uploading the RO resources
 	 */
 	protected URI addWorkflowBundle(URI roURI, final WorkflowBundle wfbundle, UUID wfUUID)
+		throws IOException
 	{
 		URI wfURI = roURI.resolve(wfUUID.toString());
 
-		try {
-			final PipedInputStream in = new PipedInputStream();
-			final PipedOutputStream out = new PipedOutputStream(in);
-			new Thread(new Runnable() {
+		final PipedInputStream in = new PipedInputStream();
+		final PipedOutputStream out = new PipedOutputStream(in);
+		new Thread(new Runnable() {
 
-				public void run()
-				{
+			public void run()
+			{
+				try {
+					bundleIO.writeBundle(wfbundle, out, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
+				}
+				catch (WriterException | IOException e) {
+					log.error("Can't download workflow bundle", e);
+				}
+				finally {
 					try {
-						bundleIO.writeBundle(wfbundle, out, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
+						out.close();
 					}
-					catch (WriterException | IOException e) {
-						log.error("Can't download workflow bundle", e);
-					}
-					finally {
-						try {
-							out.close();
-						}
-						catch (IOException e) {
-							log.warn("Exception when closing the workflow bundle output stream", e);
-						}
+					catch (IOException e) {
+						log.warn("Exception when closing the workflow bundle output stream", e);
 					}
 				}
-			}).start();
-			uploadAggregatedResource(wfURI, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE, in);
-		}
-		catch (IOException e) {
-			log.error("Can't upload workflow bundle", e);
-		}
+			}
+		}).start();
+		uploadAggregatedResource(wfURI, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE, in);
 		return wfURI;
 
 	}
@@ -138,9 +152,12 @@ public abstract class Wf2ROConverter
 	 *            the workflow bundle
 	 * @param rodlWfURI
 	 *            the workflow bundle URI used in the research object
-	 * @return
+	 * @return the annotation body URI
+	 * @throws IOException
+	 *             when there was a problem with getting/uploading the RO resources
 	 */
 	protected URI addRoEvoAnnotation(URI roURI, WorkflowBundle wfbundle, URI rodlWfURI)
+		throws IOException
 	{
 		// TODO Auto-generated method stub
 		return null;
@@ -157,9 +174,12 @@ public abstract class Wf2ROConverter
 	 *            the workflow bundle
 	 * @param rodlWfURI
 	 *            the workflow bundle URI used in the research object
-	 * @return
+	 * @return the annotation body URI
+	 * @throws IOException
+	 *             when there was a problem with getting/uploading the RO resources
 	 */
 	protected URI addWfDescAnnotation(URI roURI, final WorkflowBundle wfbundle, URI rodlWfURI)
+		throws IOException
 	{
 		OntModel manifest = createManifestModel(roURI);
 		URI annotationBodyURI = createAnnotationBodyURI(roURI, rodlWfURI);
@@ -199,7 +219,7 @@ public abstract class Wf2ROConverter
 			manifest = createManifestModel(roURI);
 			ROService.deleteAnnotationFromManifest(manifest, annotationURI);
 			uploadManifest(roURI, manifest);
-			return null;
+			throw e;
 		}
 	}
 
@@ -262,6 +282,12 @@ public abstract class Wf2ROConverter
 	protected abstract void uploadManifest(URI roURI, OntModel manifest);
 
 
+	/**
+	 * Return the list of resources that have already been added as a result of the
+	 * conversion.
+	 * 
+	 * @return the list of resource URIs
+	 */
 	public List<URI> getResourcesAdded()
 	{
 		return resourcesAdded;

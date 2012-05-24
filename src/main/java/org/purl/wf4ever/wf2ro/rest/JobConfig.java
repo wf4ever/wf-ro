@@ -4,6 +4,12 @@ import java.net.URI;
 
 import javax.xml.bind.annotation.XmlRootElement;
 
+/**
+ * Parameters provided in JSON when creating a job
+ * 
+ * @author piotrekhol
+ * 
+ */
 @XmlRootElement
 public class JobConfig
 {

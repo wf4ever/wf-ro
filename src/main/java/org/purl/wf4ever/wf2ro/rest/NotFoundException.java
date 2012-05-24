@@ -2,6 +2,12 @@ package org.purl.wf4ever.wf2ro.rest;
 
 import java.util.UUID;
 
+/**
+ * The requested job does not exist.
+ * 
+ * @author piotrekhol
+ * 
+ */
 public class NotFoundException
 	extends Exception
 {

@@ -5,6 +5,12 @@ import org.mortbay.jetty.Server;
 import org.mortbay.jetty.bio.SocketConnector;
 import org.mortbay.jetty.webapp.WebAppContext;
 
+/**
+ * This class can be run to start an embedded Jetty server with this service deployed
+ * 
+ * @author piotrekhol
+ * 
+ */
 public class Start
 {
 
@@ -34,8 +40,7 @@ public class Start
 		server.addHandler(bb);
 
 		try {
-			System.out
-					.println(">>> STARTING EMBEDDED JETTY SERVER, PRESS ANY KEY TO STOP");
+			System.out.println(">>> STARTING EMBEDDED JETTY SERVER, PRESS ANY KEY TO STOP");
 			server.start();
 			while (System.in.available() == 0) {
 				Thread.sleep(5000);

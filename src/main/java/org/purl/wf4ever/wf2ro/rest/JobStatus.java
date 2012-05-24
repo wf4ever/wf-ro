@@ -7,6 +7,12 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 import org.purl.wf4ever.wf2ro.rest.Job.Status;
 
+/**
+ * Job status as JSON
+ * 
+ * @author piotrekhol
+ * 
+ */
 @XmlRootElement
 public class JobStatus
 {

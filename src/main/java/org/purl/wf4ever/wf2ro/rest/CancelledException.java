@@ -6,6 +6,8 @@ package org.purl.wf4ever.wf2ro.rest;
 import java.util.UUID;
 
 /**
+ * Job that was requested has been cancelled
+ * 
  * @author piotrekhol
  * 
  */

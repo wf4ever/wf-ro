@@ -19,6 +19,12 @@ import com.hp.hpl.jena.ontology.OntModelSpec;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.Resource;
 
+/**
+ * 
+ * This is a mockup converter that saves all resources in memory
+ * 
+ * @author piotrekhol
+ */
 public class MockupWf2ROConverter
 	extends Wf2ROConverter
 {
@@ -66,6 +72,7 @@ public class MockupWf2ROConverter
 
 	@Override
 	protected URI addWorkflowBundle(URI roURI, WorkflowBundle wfbundle, UUID wfUUID)
+		throws IOException
 	{
 		URI wfURI = super.addWorkflowBundle(roURI, wfbundle, wfUUID);
 		Resource ro = manifest.createResource(roURI.toString());
