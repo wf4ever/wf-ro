@@ -22,6 +22,18 @@
 			<name>myGrid Repository</name>
 			<url>http://www.mygrid.org.uk/maven/repository</url>
 		</repository>
+		<repository>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+			<id>dlibra-releases</id>
+			<url>http://maven.man.poznan.pl/repository/dlibra-libs-releases-public/</url>
+		</repository>
+		<repository>
+			<snapshots />
+			<id>dlibra-snapshots</id>
+			<url>http://maven.man.poznan.pl/repository/dlibra-libs-snapshots-public/</url>
+		</repository>
 	</repositories>
 	<dependencies>
 		<dependency>
