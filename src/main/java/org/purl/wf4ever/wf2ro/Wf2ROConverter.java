@@ -24,273 +24,301 @@ import uk.org.taverna.scufl2.rdfxml.RDFXMLReader;
 import com.hp.hpl.jena.ontology.OntModel;
 
 /**
- * This class defines the main logic of workflow-RO conversion. It is abstract because it
- * leaves the resource upload details to its subclasses.
+ * This class defines the main logic of workflow-RO conversion. It is abstract because it leaves the resource upload
+ * details to its subclasses.
  * 
  * @author piotrekhol
  * 
  */
-public abstract class Wf2ROConverter
-{
+public abstract class Wf2ROConverter {
 
-	private static final Logger log = Logger.getLogger(Wf2ROConverter.class);
+    /** text/turtle. */
+    private static final String TEXT_TURTLE = "text/turtle";
 
-	private static WorkflowBundleIO bundleIO = new WorkflowBundleIO();
+    /** Wfdesc mime type. */
+    private static final String TEXT_VND_WF4EVER_WFDESC_TURTLE = "text/vnd.wf4ever.wfdesc+turtle";
 
-	protected URI serviceURI;
+    /** Logger. */
+    private static final Logger LOG = Logger.getLogger(Wf2ROConverter.class);
 
-	private List<URI> resourcesAdded = Collections.synchronizedList(new ArrayList<URI>());
+    /** Workflow serializer/deserializer. */
+    private static WorkflowBundleIO bundleIO = new WorkflowBundleIO();
 
+    /** Service URI. */
+    protected URI serviceURI;
 
-	/**
-	 * 
-	 * @param serviceURI
-	 *            The conversion service URI, used e.g. for authoring changes in metadata
-	 */
-	public Wf2ROConverter(URI serviceURI)
-	{
-		this.serviceURI = serviceURI;
-	}
+    /** Resources added so far. */
+    private List<URI> resourcesAdded = Collections.synchronizedList(new ArrayList<URI>());
 
+    /** Workflow. */
+    private WorkflowBundle wfbundle;
 
-	/**
-	 * The conversion method. Note that there are no ROSRS parameters, since all ROSRS
-	 * handling is delegated to abstract methods of this class.
-	 * 
-	 * @param wfbundle
-	 *            The t2flow/scufl2 workflow that needs to be converted to an RO.
-	 * @return list of URIs of resources that have been added to the RO
-	 */
-	public List<URI> convert(WorkflowBundle wfbundle)
-	{
-		UUID wfUUID = getWorkflowBundleUUID(wfbundle);
-		URI roURI = createResearchObject(wfUUID);
-		URI wfURI;
-		try {
-			wfURI = addWorkflowBundle(roURI, wfbundle, wfUUID);
-			resourcesAdded.add(wfURI);
-		}
-		catch (IOException e) {
-			log.error("Can't upload workflow bundle", e);
-			return resourcesAdded;
-		}
-		try {
-			resourcesAdded.add(addWfDescAnnotation(roURI, wfbundle, wfURI));
-		}
-		catch (IOException e) {
-			log.error("Can't upload workflow desc", e);
-		}
-		try {
-			resourcesAdded.add(addRoEvoAnnotation(roURI, wfbundle, wfURI));
-		}
-		catch (IOException e) {
-			log.error("Can't upload RO evolution desc", e);
-		}
-		return resourcesAdded;
-	}
+    /** Used to guarantee that the conversion is run only once. */
+    private Boolean running = false;
 
 
-	private UUID getWorkflowBundleUUID(WorkflowBundle wfbundle)
-	{
-		URI wfbundleURI = wfbundle.getGlobalBaseURI();
-		return UUID.fromString(wfbundleURI.resolve("..").relativize(wfbundleURI).toString().split("/")[0]);
-	}
+    /**
+     * The constructor.
+     * 
+     * @param serviceURI
+     *            The conversion service URI, used e.g. for authoring changes in metadata
+     * @param wfbundle
+     *            The t2flow/scufl2 workflow that needs to be converted to an RO.
+     */
+    public Wf2ROConverter(URI serviceURI, WorkflowBundle wfbundle) {
+        this.serviceURI = serviceURI;
+        this.wfbundle = wfbundle;
+    }
 
 
-	/**
-	 * Upload the workflow bundle to RODL.
-	 * 
-	 * @param roURI
-	 *            research object URI
-	 * @param wfbundle
-	 *            the workflow bundle
-	 * @param wfUUID
-	 *            workflow bundle UUID
-	 * @return the workflow bundle URI as in the manifest or null if uploading failed
-	 * @throws IOException
-	 *             when there was a problem with getting/uploading the RO resources
-	 */
-	protected URI addWorkflowBundle(URI roURI, final WorkflowBundle wfbundle, UUID wfUUID)
-		throws IOException
-	{
-		URI wfURI = roURI.resolve(wfUUID.toString());
-
-		final PipedInputStream in = new PipedInputStream();
-		final PipedOutputStream out = new PipedOutputStream(in);
-		new Thread(new Runnable() {
-
-			public void run()
-			{
-				try {
-					bundleIO.writeBundle(wfbundle, out, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
-				}
-				catch (WriterException | IOException e) {
-					log.error("Can't download workflow bundle", e);
-				}
-				finally {
-					try {
-						out.close();
-					}
-					catch (IOException e) {
-						log.warn("Exception when closing the workflow bundle output stream", e);
-					}
-				}
-			}
-		}).start();
-		uploadAggregatedResource(wfURI, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE, in);
-		return wfURI;
-
-	}
+    /**
+     * The conversion method. Note that there are no ROSRS parameters, since all ROSRS handling is delegated to abstract
+     * methods of this class.
+     * 
+     * This method can be called only once per class instance. Subsequent calls will result in IllegalStateException
+     * being thrown.
+     */
+    public void convert() {
+        synchronized (running) {
+            if (running) {
+                throw new IllegalStateException(
+                        "This instance can only be run once. Create another instance for another conversion.");
+            }
+            running = true;
+        }
+        UUID wfUUID = getWorkflowBundleUUID(wfbundle);
+        URI roURI = createResearchObject(wfUUID);
+        URI wfURI;
+        try {
+            wfURI = addWorkflowBundle(roURI, wfbundle, wfUUID);
+            resourcesAdded.add(wfURI);
+        } catch (IOException e) {
+            LOG.error("Can't upload workflow bundle", e);
+            return;
+        }
+        try {
+            resourcesAdded.add(addWfDescAnnotation(roURI, wfbundle, wfURI));
+        } catch (IOException e) {
+            LOG.error("Can't upload workflow desc", e);
+        }
+        try {
+            resourcesAdded.add(addRoEvoAnnotation(roURI, wfbundle, wfURI));
+        } catch (IOException e) {
+            LOG.error("Can't upload RO evolution desc", e);
+        }
+    }
 
 
-	/**
-	 * Generates and adds a workflow bundle history annotation using the roevo ontology.
-	 * 
-	 * @param roURI
-	 *            research object URI
-	 * @param wfbundle
-	 *            the workflow bundle
-	 * @param rodlWfURI
-	 *            the workflow bundle URI used in the research object
-	 * @return the annotation body URI
-	 * @throws IOException
-	 *             when there was a problem with getting/uploading the RO resources
-	 */
-	protected URI addRoEvoAnnotation(URI roURI, WorkflowBundle wfbundle, URI rodlWfURI)
-		throws IOException
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
+    /**
+     * Extract workflow UUID.
+     * 
+     * @param wfbundle
+     *            workflow bundle
+     * @return workflow UUID
+     */
+    private UUID getWorkflowBundleUUID(WorkflowBundle wfbundle) {
+        URI wfbundleURI = wfbundle.getGlobalBaseURI();
+        return UUID.fromString(wfbundleURI.resolve("..").relativize(wfbundleURI).toString().split("/")[0]);
+    }
 
 
-	/**
-	 * Generates and adds a workflow bundle description annotation using the wfdesc
-	 * ontology.
-	 * 
-	 * @param roURI
-	 *            research object URI
-	 * @param wfbundle
-	 *            the workflow bundle
-	 * @param rodlWfURI
-	 *            the workflow bundle URI used in the research object
-	 * @return the annotation body URI
-	 * @throws IOException
-	 *             when there was a problem with getting/uploading the RO resources
-	 */
-	protected URI addWfDescAnnotation(URI roURI, final WorkflowBundle wfbundle, URI rodlWfURI)
-		throws IOException
-	{
-		OntModel manifest = createManifestModel(roURI);
-		URI annotationBodyURI = createAnnotationBodyURI(roURI, rodlWfURI);
-		URI annotationURI = createAnnotationURI(manifest, roURI);
-		ROService
-				.addAnnotationToManifestModel(manifest, roURI, annotationURI, rodlWfURI, annotationBodyURI, serviceURI);
-		uploadManifest(roURI, manifest);
+    /**
+     * Upload the workflow bundle to RODL.
+     * 
+     * @param roURI
+     *            research object URI
+     * @param wfbundle
+     *            the workflow bundle
+     * @param wfUUID
+     *            workflow bundle UUID
+     * @return the workflow bundle URI as in the manifest or null if uploading failed
+     * @throws IOException
+     *             when there was a problem with getting/uploading the RO resources
+     */
+    protected URI addWorkflowBundle(URI roURI, final WorkflowBundle wfbundle, UUID wfUUID)
+            throws IOException {
+        URI wfURI = roURI.resolve(wfUUID.toString());
 
-		try {
-			final PipedInputStream in = new PipedInputStream();
-			final PipedOutputStream out = new PipedOutputStream(in);
-			new Thread(new Runnable() {
+        final PipedInputStream in = new PipedInputStream();
+        final PipedOutputStream out = new PipedOutputStream(in);
+        new Thread(new Runnable() {
 
-				public void run()
-				{
-					try {
-						bundleIO.writeBundle(wfbundle, out, "text/vnd.wf4ever.wfdesc+turtle");
-					}
-					catch (WriterException | IOException e) {
-						log.error("Can't download workflow desc", e);
-					}
-					finally {
-						try {
-							out.close();
-						}
-						catch (IOException e) {
-							log.warn("Exception when closing the annotation body output stream", e);
-						}
-					}
-				}
-			}).start();
-			uploadAggregatedResource(annotationBodyURI, "text/turtle", in);
-			return annotationBodyURI;
-		}
-		catch (IOException e) {
-			log.error("Can't upload annotation body", e);
-			manifest = createManifestModel(roURI);
-			ROService.deleteAnnotationFromManifest(manifest, annotationURI);
-			uploadManifest(roURI, manifest);
-			throw e;
-		}
-	}
+            public void run() {
+                try {
+                    bundleIO.writeBundle(wfbundle, out, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
+                } catch (WriterException | IOException e) {
+                    LOG.error("Can't download workflow bundle", e);
+                } finally {
+                    try {
+                        out.close();
+                    } catch (IOException e) {
+                        LOG.warn("Exception when closing the workflow bundle output stream", e);
+                    }
+                }
+            }
+        }).start();
+        uploadAggregatedResource(wfURI, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE, in);
+        return wfURI;
+
+    }
 
 
-	protected URI createAnnotationURI(OntModel manifest, URI roURI)
-	{
-		return ROService.createAnnotationURI(manifest, roURI);
-	}
+    /**
+     * Generates and adds a workflow bundle history annotation using the roevo ontology.
+     * 
+     * @param roURI
+     *            research object URI
+     * @param wfbundle
+     *            the workflow bundle
+     * @param rodlWfURI
+     *            the workflow bundle URI used in the research object
+     * @return the annotation body URI
+     * @throws IOException
+     *             when there was a problem with getting/uploading the RO resources
+     */
+    protected URI addRoEvoAnnotation(URI roURI, WorkflowBundle wfbundle, URI rodlWfURI)
+            throws IOException {
+        // TODO Auto-generated method stub
+        throw new IOException("not implemented");
+    }
 
 
-	protected URI createAnnotationBodyURI(URI roURI, URI rodlWfURI)
-	{
-		return ROService.createAnnotationBodyURI(roURI, rodlWfURI);
-	}
+    /**
+     * Generates and adds a workflow bundle description annotation using the wfdesc ontology.
+     * 
+     * @param roURI
+     *            research object URI
+     * @param wfbundle
+     *            the workflow bundle
+     * @param rodlWfURI
+     *            the workflow bundle URI used in the research object
+     * @return the annotation body URI
+     * @throws IOException
+     *             when there was a problem with getting/uploading the RO resources
+     */
+    protected URI addWfDescAnnotation(URI roURI, final WorkflowBundle wfbundle, URI rodlWfURI)
+            throws IOException {
+        OntModel manifest = createManifestModel(roURI);
+        URI annotationBodyURI = createAnnotationBodyURI(roURI, rodlWfURI);
+        URI annotationURI = createAnnotationURI(manifest, roURI);
+        ROService
+                .addAnnotationToManifestModel(manifest, roURI, annotationURI, rodlWfURI, annotationBodyURI, serviceURI);
+        uploadManifest(roURI, manifest);
+
+        try {
+            final PipedInputStream in = new PipedInputStream();
+            final PipedOutputStream out = new PipedOutputStream(in);
+            new Thread(new Runnable() {
+
+                public void run() {
+                    try {
+                        bundleIO.writeBundle(wfbundle, out, TEXT_VND_WF4EVER_WFDESC_TURTLE);
+                    } catch (WriterException | IOException e) {
+                        LOG.error("Can't download workflow desc", e);
+                    } finally {
+                        try {
+                            out.close();
+                        } catch (IOException e) {
+                            LOG.warn("Exception when closing the annotation body output stream", e);
+                        }
+                    }
+                }
+            }).start();
+            uploadAggregatedResource(annotationBodyURI, TEXT_TURTLE, in);
+            return annotationBodyURI;
+        } catch (IOException e) {
+            manifest = createManifestModel(roURI); // a to nie rzuca wyjatku? dodac try/catch i log
+            ROService.deleteAnnotationFromManifest(manifest, annotationURI);
+            uploadManifest(roURI, manifest);
+            throw new IOException("Can't upload annotation body", e);
+        }
+    }
 
 
-	/**
-	 * Create a new research object or, if it exists, prepare it for uploading workflows,
-	 * i.e. preserve the previous workflow versions.
-	 * 
-	 * @param wfUUID
-	 *            UUID of the workflow bundle that will be uploaded later.
-	 * 
-	 * @return the research object URI
-	 */
-	protected abstract URI createResearchObject(UUID wfUUID);
+    /**
+     * Create an annotation URI. By default calls {@link ROService#createAnnotationURI(OntModel, URI)}.
+     * 
+     * @param manifest
+     *            the manifest model
+     * @param roURI
+     *            RO URI
+     * @return the annotation URI
+     */
+    protected URI createAnnotationURI(OntModel manifest, URI roURI) {
+        return ROService.createAnnotationURI(manifest, roURI);
+    }
 
 
-	/**
-	 * Create an output stream to which an aggregated resource can be saved. The output
-	 * stream will be closed after being used.
-	 * 
-	 * @param resourceURI
-	 *            resource URI
-	 * @return the output stream
-	 * @throws IOException
-	 */
-	protected abstract void uploadAggregatedResource(URI resourceURI, String contentType, InputStream in)
-		throws IOException;
+    /**
+     * Create an annotation body URI. By default calls {@link ROService#createAnnotationBodyURI(URI, URI)}.
+     * 
+     * @param roURI
+     *            RO URI
+     * @param rodlWfURI
+     *            workflow URI
+     * @return annotation body URI
+     */
+    protected URI createAnnotationBodyURI(URI roURI, URI rodlWfURI) {
+        return ROService.createAnnotationBodyURI(roURI, rodlWfURI);
+    }
 
 
-	/**
-	 * Create Jena model of the manifest.
-	 * 
-	 * @param roURI
-	 *            research object URI
-	 * @return the Jena model of the manifest
-	 */
-	protected abstract OntModel createManifestModel(URI roURI);
+    /**
+     * Create a new research object or, if it exists, prepare it for uploading workflows, i.e. preserve the previous
+     * workflow versions.
+     * 
+     * @param wfUUID
+     *            UUID of the workflow bundle that will be uploaded later.
+     * 
+     * @return the research object URI
+     */
+    protected abstract URI createResearchObject(UUID wfUUID);
 
 
-	/**
-	 * Upload the manifest to RODL.
-	 * 
-	 * @param roURI
-	 *            research object URI
-	 * @param manifest
-	 *            the Jena model of the manifest
-	 */
-	protected abstract void uploadManifest(URI roURI, OntModel manifest);
+    /**
+     * Saves an aggregated resource to RODL.
+     * 
+     * @param resourceURI
+     *            resource URI
+     * @param contentType
+     *            resource content type to be sent as in HTTP request
+     * @param in
+     *            resource input stream
+     * @throws IOException
+     *             when there are problems with uploading the resource
+     */
+    protected abstract void uploadAggregatedResource(URI resourceURI, String contentType, InputStream in)
+            throws IOException;
 
 
-	/**
-	 * Return the list of resources that have already been added as a result of the
-	 * conversion.
-	 * 
-	 * @return the list of resource URIs
-	 */
-	public List<URI> getResourcesAdded()
-	{
-		return resourcesAdded;
-	}
+    /**
+     * Create Jena model of the manifest.
+     * 
+     * @param roURI
+     *            research object URI
+     * @return the Jena model of the manifest
+     */
+    protected abstract OntModel createManifestModel(URI roURI);
+
+
+    /**
+     * Upload the manifest to RODL.
+     * 
+     * @param roURI
+     *            research object URI
+     * @param manifest
+     *            the Jena model of the manifest
+     */
+    protected abstract void uploadManifest(URI roURI, OntModel manifest);
+
+
+    /**
+     * Return the list of resources that have already been added as a result of the conversion.
+     * 
+     * @return the list of resource URIs
+     */
+    public List<URI> getResourcesAdded() {
+        return resourcesAdded;
+    }
 
 }

@@ -8,18 +8,21 @@ import java.util.UUID;
  * @author piotrekhol
  * 
  */
-public class NotFoundException
-	extends Exception
-{
+public class NotFoundException extends Exception {
 
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 5595815044424772734L;
+    /**
+     * id.
+     */
+    private static final long serialVersionUID = 5595815044424772734L;
 
 
-	public NotFoundException(UUID uuid)
-	{
-		super("No job with id " + uuid);
-	}
+    /**
+     * Constructor.
+     * 
+     * @param uuid
+     *            job UUID
+     */
+    public NotFoundException(UUID uuid) {
+        super("No job with id " + uuid);
+    }
 }

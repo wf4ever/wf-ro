@@ -5,103 +5,112 @@ import java.util.List;
 
 import javax.xml.bind.annotation.XmlRootElement;
 
-import org.purl.wf4ever.wf2ro.rest.Job.Status;
+import org.purl.wf4ever.wf2ro.rest.Job.State;
 
 /**
- * Job status as JSON
+ * Job status as JSON.
  * 
  * @author piotrekhol
  * 
  */
 @XmlRootElement
-public class JobStatus
-{
+public class JobStatus {
 
-	private URI resource;
+    /** workflow URI. */
+    private URI resource;
 
-	private URI format;
+    /** workflow format URI. */
+    private URI format;
 
-	private URI ro;
+    /** RO URI. */
+    private URI ro;
 
-	private Status status;
+    /** job state. */
+    private State status;
 
-	private List<URI> added;
-
-
-	public JobStatus()
-	{
-
-	}
+    /** resources already uploaded. */
+    private List<URI> added;
 
 
-	public JobStatus(URI resource, URI format, URI ro, Status status, List<URI> added)
-	{
-		super();
-		this.resource = resource;
-		this.format = format;
-		this.ro = ro;
-		this.status = status;
-		this.added = added;
-	}
+    /**
+     * Default empty constructor.
+     */
+    public JobStatus() {
+
+    }
 
 
-	public URI getResource()
-	{
-		return resource;
-	}
+    /**
+     * Constructor.
+     * 
+     * @param resource
+     *            workflow URI
+     * @param format
+     *            workflow format URI
+     * @param ro
+     *            RO URI
+     * @param state
+     *            job state
+     * @param added
+     *            resources added
+     */
+    public JobStatus(URI resource, URI format, URI ro, State state, List<URI> added) {
+        super();
+        this.resource = resource;
+        this.format = format;
+        this.ro = ro;
+        this.status = state;
+        this.added = added;
+    }
 
 
-	public void setResource(URI resource)
-	{
-		this.resource = resource;
-	}
+    public URI getResource() {
+        return resource;
+    }
 
 
-	public URI getFormat()
-	{
-		return format;
-	}
+    public void setResource(URI resource) {
+        this.resource = resource;
+    }
 
 
-	public void setFormat(URI format)
-	{
-		this.format = format;
-	}
+    public URI getFormat() {
+        return format;
+    }
 
 
-	public URI getRo()
-	{
-		return ro;
-	}
+    public void setFormat(URI format) {
+        this.format = format;
+    }
 
 
-	public void setRo(URI ro)
-	{
-		this.ro = ro;
-	}
+    public URI getRo() {
+        return ro;
+    }
 
 
-	public Status getStatus()
-	{
-		return status;
-	}
+    public void setRo(URI ro) {
+        this.ro = ro;
+    }
 
 
-	public void setStatus(Status status)
-	{
-		this.status = status;
-	}
+    public State getStatus() {
+        return status;
+    }
 
 
-	public List<URI> getAdded()
-	{
-		return added;
-	}
+    public void setStatus(State status) {
+        this.status = status;
+    }
 
 
-	public void setAdded(List<URI> added)
-	{
-		this.added = added;
-	}
+    public List<URI> getAdded() {
+        return added;
+    }
+
+
+    public void setAdded(List<URI> added) {
+        this.added = added;
+    }
 
 }

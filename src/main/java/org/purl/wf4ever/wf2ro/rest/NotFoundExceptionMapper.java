@@ -12,14 +12,11 @@ import javax.ws.rs.ext.Provider;
  * 
  */
 @Provider
-public class NotFoundExceptionMapper
-	implements ExceptionMapper<NotFoundException>
-{
+public class NotFoundExceptionMapper implements ExceptionMapper<NotFoundException> {
 
-	@Override
-	public Response toResponse(NotFoundException e)
-	{
-		return Response.status(Status.NOT_FOUND).type("text/plain").entity(e.getMessage()).build();
-	}
+    @Override
+    public Response toResponse(NotFoundException e) {
+        return Response.status(Status.NOT_FOUND).type("text/plain").entity(e.getMessage()).build();
+    }
 
 }

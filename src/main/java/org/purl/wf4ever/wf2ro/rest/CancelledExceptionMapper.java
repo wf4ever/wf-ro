@@ -12,14 +12,11 @@ import javax.ws.rs.ext.Provider;
  * 
  */
 @Provider
-public class CancelledExceptionMapper
-	implements ExceptionMapper<CancelledException>
-{
+public class CancelledExceptionMapper implements ExceptionMapper<CancelledException> {
 
-	@Override
-	public Response toResponse(CancelledException e)
-	{
-		return Response.status(Status.GONE).type("text/plain").entity(e.getMessage()).build();
-	}
+    @Override
+    public Response toResponse(CancelledException e) {
+        return Response.status(Status.GONE).type("text/plain").entity(e.getMessage()).build();
+    }
 
 }

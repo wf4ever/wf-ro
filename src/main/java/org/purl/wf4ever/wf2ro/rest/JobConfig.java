@@ -5,84 +5,92 @@ import java.net.URI;
 import javax.xml.bind.annotation.XmlRootElement;
 
 /**
- * Parameters provided in JSON when creating a job
+ * Parameters provided in JSON when creating a job.
  * 
  * @author piotrekhol
  * 
  */
 @XmlRootElement
-public class JobConfig
-{
+public class JobConfig {
 
-	private URI resource;
+    /** workflow URI. */
+    private URI resource;
 
-	private URI format;
+    /** workflow format URI. */
+    private URI format;
 
-	private URI ro;
+    /** RO URI. */
+    private URI ro;
 
-	private String token;
-
-
-	public JobConfig()
-	{
-
-	}
+    /** RODL access token. */
+    private String token;
 
 
-	public JobConfig(URI resource, URI format, URI ro, String token)
-	{
-		super();
-		this.resource = resource;
-		this.format = format;
-		this.ro = ro;
-		this.token = token;
-	}
+    /**
+     * Default empty constructor.
+     */
+    public JobConfig() {
+
+    }
 
 
-	public URI getResource()
-	{
-		return resource;
-	}
+    /**
+     * Constructor.
+     * 
+     * @param resource
+     *            workflow URI
+     * @param format
+     *            workflow format URI
+     * @param ro
+     *            RO URI
+     * @param token
+     *            RODL access token
+     */
+    public JobConfig(URI resource, URI format, URI ro, String token) {
+        super();
+        this.resource = resource;
+        this.format = format;
+        this.ro = ro;
+        this.token = token;
+    }
 
 
-	public void setResource(URI resource)
-	{
-		this.resource = resource;
-	}
+    public URI getResource() {
+        return resource;
+    }
 
 
-	public URI getFormat()
-	{
-		return format;
-	}
+    public void setResource(URI resource) {
+        this.resource = resource;
+    }
 
 
-	public void setFormat(URI format)
-	{
-		this.format = format;
-	}
+    public URI getFormat() {
+        return format;
+    }
 
 
-	public URI getRo()
-	{
-		return ro;
-	}
+    public void setFormat(URI format) {
+        this.format = format;
+    }
 
 
-	public void setRo(URI ro)
-	{
-		this.ro = ro;
-	}
+    public URI getRo() {
+        return ro;
+    }
 
 
-	public String getToken()
-	{
-		return token;
-	}
+    public void setRo(URI ro) {
+        this.ro = ro;
+    }
 
 
-	public void setToken(String token)
-	{
-		this.token = token;
-	}
+    public String getToken() {
+        return token;
+    }
+
+
+    public void setToken(String token) {
+        this.token = token;
+    }
 }
