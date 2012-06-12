@@ -20,6 +20,7 @@ import uk.org.taverna.scufl2.api.container.WorkflowBundle;
 import uk.org.taverna.scufl2.api.io.WorkflowBundleIO;
 import uk.org.taverna.scufl2.api.io.WriterException;
 import uk.org.taverna.scufl2.rdfxml.RDFXMLReader;
+import uk.org.taverna.scufl2.wfdesc.ROEvoSerializer;
 
 import com.hp.hpl.jena.ontology.OntModel;
 
@@ -176,10 +177,46 @@ public abstract class Wf2ROConverter {
      * @throws IOException
      *             when there was a problem with getting/uploading the RO resources
      */
-    protected URI addRoEvoAnnotation(URI roURI, WorkflowBundle wfbundle, URI rodlWfURI)
+    protected URI addRoEvoAnnotation(URI roURI, final WorkflowBundle wfbundle, URI rodlWfURI)
             throws IOException {
-        // TODO Auto-generated method stub
-        throw new IOException("not implemented");
+
+        OntModel manifest = createManifestModel(roURI);
+        URI annotationBodyURI = createAnnotationBodyURI(roURI, rodlWfURI);
+        URI annotationURI = createAnnotationURI(manifest, roURI);
+        ROService
+                .addAnnotationToManifestModel(manifest, roURI, annotationURI, rodlWfURI, annotationBodyURI, serviceURI);
+        uploadManifest(roURI, manifest);
+
+        try {
+            final PipedInputStream in = new PipedInputStream();
+            final PipedOutputStream out = new PipedOutputStream(in);
+            new Thread(new Runnable() {
+
+                public void run() {
+                	ROEvoSerializer roEvo = new ROEvoSerializer();
+                	try {
+                		roEvo.workflowHistory(wfbundle.getMainWorkflow(), System.out);
+                    } catch (WriterException e) {
+                        LOG.error("Can't download workflow desc", e);
+                    } finally {
+                        try {
+                            out.close();
+                        } catch (IOException e) {
+                            LOG.warn("Exception when closing the annotation body output stream", e);
+                        }
+                    }
+                }
+            }).start();
+            uploadAggregatedResource(annotationBodyURI, TEXT_TURTLE, in);
+            return annotationBodyURI;
+        } catch (IOException e) {
+            manifest = createManifestModel(roURI); // a to nie rzuca wyjatku? dodac try/catch i log
+            ROService.deleteAnnotationFromManifest(manifest, annotationURI);
+            uploadManifest(roURI, manifest);
+            throw new IOException("Can't upload annotation body", e);
+        }
+
+    	
     }
 
 

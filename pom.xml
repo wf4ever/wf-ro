@@ -34,10 +34,15 @@
 			<id>dlibra-snapshots</id>
 			<url>http://maven.man.poznan.pl/repository/dlibra-libs-snapshots-public/</url>
 		</repository>
+        <repository>
+            <snapshots />
+            <id>scufl2-wfdesc-snapshots</id>
+            <url>https://buildhive.cloudbees.com/job/wf4ever/job/scufl2-wfdesc/ws/target/scufl2-wfdesc/repo/</url>
+        </repository>
 	</repositories>
 	<dependencies>
 		<dependency>
-			<groupId>uk.org.taverna.scufl2</groupId>
+			<groupId>org.purl.wf4ever</groupId>
 			<artifactId>scufl2-wfdesc</artifactId>
 			<version>0.2-SNAPSHOT</version>
 		</dependency>
