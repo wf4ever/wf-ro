@@ -145,6 +145,7 @@ public abstract class Wf2ROConverter {
         new Thread(new Runnable() {
 
             public void run() {
+            	Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
                 try {
                     bundleIO.writeBundle(wfbundle, out, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
                 } catch (WriterException | IOException e) {
