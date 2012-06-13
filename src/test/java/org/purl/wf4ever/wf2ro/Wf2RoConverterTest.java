@@ -63,7 +63,7 @@ public class Wf2RoConverterTest {
         // should aggregate the workflow and 2 annotations about it
         NodeIterator it = ro.listPropertyValues(Vocab.ORE_AGGREGATES);
         // 2 because the ro evo has not been added yet
-        for (int i = 0; i < /*3*/2; i++) {
+        for (int i = 0; i < /*2*/3; i++) {
             Assert.assertTrue("RO aggregates 3x wf or annotation (" + i + ")", it.hasNext());
             RDFNode node = it.next();
             Assert.assertTrue(node.isURIResource());
