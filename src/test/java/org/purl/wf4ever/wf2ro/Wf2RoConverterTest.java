@@ -61,7 +61,7 @@ public class Wf2RoConverterTest {
         Individual ro = model.getIndividual(converter.createResearchObject(null).toString());
         Assert.assertNotNull("RO exists in the manifest", ro);
         // should aggregate the workflow and 2 annotations about it
-        NodeIterator it = ro.listPropertyValues(Vocab.aggregates);
+        NodeIterator it = ro.listPropertyValues(Vocab.ORE_AGGREGATES);
         // 2 because the ro evo has not been added yet
         for (int i = 0; i < /*3*/2; i++) {
             Assert.assertTrue("RO aggregates 3x wf or annotation (" + i + ")", it.hasNext());
@@ -69,12 +69,12 @@ public class Wf2RoConverterTest {
             Assert.assertTrue(node.isURIResource());
             Individual ind = node.as(Individual.class);
             Assert.assertTrue("Wf or annotation",
-                ind.hasRDFType(Vocab.roResource) || ind.hasRDFType(Vocab.aggregatedAnnotation));
-            if (ind.hasRDFType(Vocab.roResource)) {
+                ind.hasRDFType(Vocab.RO_RESOURCE) || ind.hasRDFType(Vocab.RO_AGGREGATED_ANNOTATION));
+            if (ind.hasRDFType(Vocab.RO_RESOURCE)) {
                 Assert.assertEquals("Wf URI is correct", wfURI.toString(), ind.getURI());
                 //TODO validate that the serialized wf is correct
             } else {
-                RDFNode targetNode = ind.getPropertyValue(Vocab.annotatesAggregatedResource);
+                RDFNode targetNode = ind.getPropertyValue(Vocab.ORE_ANNOTATES_AGGREGATED_RESOURCE);
                 Assert.assertTrue(targetNode.isURIResource());
                 Assert.assertEquals("Annotation target URI is correct", wfURI.toString(), targetNode.asResource()
                         .getURI());

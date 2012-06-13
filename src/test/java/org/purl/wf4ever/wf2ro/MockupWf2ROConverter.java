@@ -45,9 +45,10 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
      */
     public MockupWf2ROConverter(URI serviceURI, WorkflowBundle wfbundle) {
         super(serviceURI, wfbundle);
-        Individual ro = manifest.createIndividual(RO_URI.toString(), Vocab.researchObject);
-        Individual m = manifest.createIndividual(RO_URI.resolve(".ro/manifest.rdf").toString(), Vocab.researchObject);
-        m.addProperty(Vocab.describes, ro);
+        Individual ro = manifest.createIndividual(RO_URI.toString(), Vocab.RO_RESEARCH_OBJECT);
+        Individual m = manifest.createIndividual(RO_URI.resolve(".ro/manifest.rdf").toString(),
+            Vocab.RO_RESEARCH_OBJECT);
+        m.addProperty(Vocab.ORE_DESCRIBES, ro);
     }
 
 
@@ -75,8 +76,8 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
             throws IOException {
         URI wfURI = super.addWorkflowBundle(roURI, wfbundle, wfUUID);
         Resource ro = manifest.createResource(roURI.toString());
-        Individual res = manifest.createIndividual(wfURI.toString(), Vocab.roResource);
-        ro.addProperty(Vocab.aggregates, res);
+        Individual res = manifest.createIndividual(wfURI.toString(), Vocab.RO_RESOURCE);
+        ro.addProperty(Vocab.ORE_AGGREGATES, res);
         return wfURI;
     }
 

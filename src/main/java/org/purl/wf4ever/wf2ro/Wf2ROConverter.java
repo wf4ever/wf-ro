@@ -15,12 +15,12 @@ import java.util.UUID;
 
 import org.apache.log4j.Logger;
 import org.purl.wf4ever.rosrs.client.common.ROService;
+import org.purl.wf4ever.wfdesc.scufl2.ROEvoSerializer;
 
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
 import uk.org.taverna.scufl2.api.io.WorkflowBundleIO;
 import uk.org.taverna.scufl2.api.io.WriterException;
 import uk.org.taverna.scufl2.rdfxml.RDFXMLReader;
-import uk.org.taverna.scufl2.wfdesc.ROEvoSerializer;
 
 import com.hp.hpl.jena.ontology.OntModel;
 
@@ -193,9 +193,9 @@ public abstract class Wf2ROConverter {
             new Thread(new Runnable() {
 
                 public void run() {
-                	ROEvoSerializer roEvo = new ROEvoSerializer();
-                	try {
-                		roEvo.workflowHistory(wfbundle.getMainWorkflow(), System.out);
+                    ROEvoSerializer roEvo = new ROEvoSerializer();
+                    try {
+                        roEvo.workflowHistory(wfbundle.getMainWorkflow(), System.out);
                     } catch (WriterException e) {
                         LOG.error("Can't download workflow desc", e);
                     } finally {
@@ -216,7 +216,6 @@ public abstract class Wf2ROConverter {
             throw new IOException("Can't upload annotation body", e);
         }
 
-    	
     }
 
 

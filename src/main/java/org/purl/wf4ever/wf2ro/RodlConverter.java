@@ -5,7 +5,6 @@ package org.purl.wf4ever.wf2ro;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
@@ -71,7 +70,7 @@ public class RodlConverter extends Wf2ROConverter {
                     throw new RuntimeException("Wrong response status when creating an RO in RODL: " + body); // zadeklarowac wlasny exception
                 }
             }
-        } catch (MalformedURLException | URISyntaxException e) {
+        } catch (URISyntaxException e) {
             throw new RuntimeException(e); // tu tez
         }
         return roURI;
