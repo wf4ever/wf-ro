@@ -196,7 +196,7 @@ public abstract class Wf2ROConverter {
                 public void run() {
                     ROEvoSerializer roEvo = new ROEvoSerializer();
                     try {
-                        roEvo.workflowHistory(wfbundle.getMainWorkflow(), System.out);
+                        roEvo.workflowHistory(wfbundle.getMainWorkflow(), out);
                     } catch (WriterException e) {
                         LOG.error("Can't download workflow desc", e);
                     } finally {
