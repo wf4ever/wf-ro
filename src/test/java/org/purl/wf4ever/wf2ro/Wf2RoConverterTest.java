@@ -28,10 +28,10 @@ import com.hp.hpl.jena.vocabulary.DCTerms;
 public class Wf2RoConverterTest {
 
     /** Workflow name, in src/test/resources. */
-    private static final String HELLO_WORLD_T2FLOW = "helloworld.t2flow";
+    private static final String HELLO_ANYONE_T2FLOW = "helloanyone.t2flow";
 
     /** Workflow UUID. */
-    private static final String WF_UUID = "8781d5f4-d0ba-48a8-a1d1-14281bd8a917";
+    private static final String WF_UUID = "01348671-5aaa-4cc2-84cc-477329b70b0d";
 
     /** Service URI. */
     private static final URI SERVICE_URI = URI.create("http://transformers");
@@ -49,10 +49,10 @@ public class Wf2RoConverterTest {
     public void testConvert()
             throws ReaderException, IOException {
         WorkflowBundleIO io = new WorkflowBundleIO();
-        InputStream helloWorld = getClass().getClassLoader().getResourceAsStream(HELLO_WORLD_T2FLOW);
+        InputStream helloWorld = getClass().getClassLoader().getResourceAsStream(HELLO_ANYONE_T2FLOW);
         WorkflowBundle wfbundle = io.readBundle(helloWorld, null);
 
-        Wf2ROConverter converter = new MockupWf2ROConverter(SERVICE_URI, wfbundle);
+        MockupWf2ROConverter converter = new MockupWf2ROConverter(SERVICE_URI, wfbundle);
         converter.convert();
 
         URI wfURI = converter.createResearchObject(null).resolve(WF_UUID);
@@ -85,6 +85,7 @@ public class Wf2RoConverterTest {
                 //TODO verify that the annotation body is correct
             }
         }
+        System.out.println(converter.getResources());
         Assert.assertFalse("RO aggregates 3x wf or annotation", it.hasNext());
     }
 }
