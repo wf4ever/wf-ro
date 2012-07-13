@@ -119,7 +119,7 @@ public class Job extends Thread {
         } catch (ReaderException | IOException e) {
             LOG.error("Can't download the resource", e);
             state = State.INVALID_RESOURCE;
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
             LOG.error("Unexpected exception during conversion", e);
             state = State.RUNTIME_ERROR;
         }
