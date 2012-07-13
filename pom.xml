@@ -61,6 +61,11 @@
 			<version>${scufl2.version}</version>
 		</dependency>
 		<dependency>
+			<groupId>uk.org.taverna.scufl2</groupId>
+			<artifactId>scufl2-t2flow</artifactId>
+			<version>${scufl2.version}</version>
+		</dependency>
+		<dependency>
 			<groupId>org.scribe</groupId>
 			<artifactId>scribe</artifactId>
 			<version>1.2.1</version>
