@@ -43,7 +43,7 @@ public class Job extends Thread {
 
         @Override
         public String toString() {
-            return this.toString().toLowerCase();
+            return super.toString().toLowerCase();
         };
     }
 
