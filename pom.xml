@@ -9,7 +9,7 @@
 	<description>Convert a t2flow workflow to an RO</description>
 	<properties>
 		<scufl2.version>0.10-biovel-SNAPSHOT</scufl2.version>
-		<jersey.version>1.13-b01</jersey.version>
+		<jersey.version>1.13</jersey.version>
 		<jetty.version>6.1.4</jetty.version>
 	</properties>
 	<repositories>
