@@ -37,8 +37,6 @@ public class RodlConverter extends Wf2ROConverter {
     /**
      * Constructor.
      * 
-     * @param serviceURI
-     *            The URI under which the conversion service is available
      * @param wfbundle
      *            the workflow bundle
      * @param roURI
@@ -46,8 +44,8 @@ public class RodlConverter extends Wf2ROConverter {
      * @param rodlToken
      *            the RODL access token for updating the RO
      */
-    public RodlConverter(URI serviceURI, WorkflowBundle wfbundle, URI roURI, Token rodlToken) {
-        super(serviceURI, wfbundle);
+    public RodlConverter(WorkflowBundle wfbundle, URI roURI, Token rodlToken) {
+        super(wfbundle);
         this.roURI = roURI;
         this.rodlToken = rodlToken;
     }
@@ -78,15 +76,15 @@ public class RodlConverter extends Wf2ROConverter {
 
 
     @Override
-    protected void uploadAggregatedResource(URI resourceURI, String contentType, InputStream in)
+    protected void uploadAggregatedResource(URI researchObject, String path, InputStream in, String contentType)
             throws IOException {
-        ClientResponse response = ROSRService.uploadResource(resourceURI, in, contentType, rodlToken);
+        ClientResponse response = ROSRService.createResource(researchObject, path, in, contentType, rodlToken);
         int code = response.getClientResponseStatus().getStatusCode();
         String body = response.getEntity(String.class);
         response.close(); //jw
-        if (code != HttpServletResponse.SC_OK && code != HttpServletResponse.SC_CREATED) {
-            throw new RuntimeException("Wrong response status when uploading an aggregated resource " + resourceURI
-                    + ": " + body); // i jeszcze tu
+        if (code != HttpServletResponse.SC_CREATED) {
+            throw new RuntimeException("Wrong response status when uploading an aggregated resource " + path + ": "
+                    + body); // i jeszcze tu
         }
     }
 
@@ -98,14 +96,13 @@ public class RodlConverter extends Wf2ROConverter {
 
 
     @Override
-    protected void uploadManifest(URI roURI, OntModel manifest) {
-        ClientResponse response = ROSRService.uploadManifestModel(roURI, manifest, rodlToken);
-        int code = response.getClientResponseStatus().getStatusCode();
-        String body = response.getEntity(String.class);
-        response.close(); //jw
-        if (code != 200) {
-            throw new RuntimeException("Wrong response status when uploading the manifest model: " + body); //jw
-        }
+    protected URI uploadAnnotation(URI researchObject, List<URI> targets, InputStream in, String contentType)
+            throws IOException {
+        String bodyPath = ROSRService.createAnnotationBodyPath(targets.get(0).resolve(".").relativize(targets.get(0))
+                .toString());
+        ClientResponse response = ROSRService.addAnnotation(researchObject, targets, bodyPath, in, contentType,
+            rodlToken);
+        return response.getLocation();
     }
 
 }

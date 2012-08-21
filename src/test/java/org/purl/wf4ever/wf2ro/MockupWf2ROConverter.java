@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -38,24 +39,15 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
     /**
      * Constructor.
      * 
-     * @param serviceURI
-     *            service URI
      * @param wfbundle
      *            workflow bundle
      */
-    public MockupWf2ROConverter(URI serviceURI, WorkflowBundle wfbundle) {
-        super(serviceURI, wfbundle);
+    public MockupWf2ROConverter(WorkflowBundle wfbundle) {
+        super(wfbundle);
         Individual ro = manifest.createIndividual(RO_URI.toString(), Vocab.RO_RESEARCH_OBJECT);
         Individual m = manifest.createIndividual(RO_URI.resolve(".ro/manifest.rdf").toString(),
             Vocab.RO_RESEARCH_OBJECT);
         m.addProperty(Vocab.ORE_DESCRIBES, ro);
-    }
-
-
-    @Override
-    protected void uploadAggregatedResource(URI annotationBodyURI, String contentType, InputStream in)
-            throws IOException {
-        resources.put(annotationBodyURI, IOUtils.toString(in));
     }
 
 
@@ -82,14 +74,29 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
     }
 
 
-    @Override
-    protected void uploadManifest(URI roURI, OntModel manifest) {
-        this.manifest = manifest;
+    public Map<URI, String> getResources() {
+        return resources;
     }
 
 
-    public Map<URI, String> getResources() {
-        return resources;
+    @Override
+    protected void uploadAggregatedResource(URI researchObject, String path, InputStream in, String contentType)
+            throws IOException {
+    }
+
+
+    @Override
+    protected URI uploadAnnotation(URI researchObject, List<URI> targets, InputStream in, String contentType)
+            throws IOException {
+        URI ann = researchObject.resolve(".ro/ann-" + UUID.randomUUID().toString());
+        URI body = researchObject.resolve(".ro/body-" + UUID.randomUUID().toString());
+        resources.put(body, IOUtils.toString(in));
+        Resource ro = manifest.createResource(researchObject.toString());
+        Individual res = manifest.createIndividual(ann.toString(), Vocab.RO_AGGREGATED_ANNOTATION);
+        ro.addProperty(Vocab.ORE_AGGREGATES, res);
+        Individual res2 = manifest.createIndividual(body.toString(), Vocab.RO_RESOURCE);
+        ro.addProperty(Vocab.ORE_AGGREGATES, res2);
+        return ann;
     }
 
 }

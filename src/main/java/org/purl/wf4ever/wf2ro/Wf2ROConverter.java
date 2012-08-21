@@ -9,12 +9,12 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
 import org.apache.log4j.Logger;
-import org.purl.wf4ever.rosrs.client.common.ROService;
 import org.purl.wf4ever.wfdesc.scufl2.ROEvoSerializer;
 
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
@@ -45,9 +45,6 @@ public abstract class Wf2ROConverter {
     /** Workflow serializer/deserializer. */
     private static WorkflowBundleIO bundleIO = new WorkflowBundleIO();
 
-    /** Service URI. */
-    protected URI serviceURI;
-
     /** Resources added so far. */
     private List<URI> resourcesAdded = Collections.synchronizedList(new ArrayList<URI>());
 
@@ -61,13 +58,10 @@ public abstract class Wf2ROConverter {
     /**
      * The constructor.
      * 
-     * @param serviceURI
-     *            The conversion service URI, used e.g. for authoring changes in metadata
      * @param wfbundle
      *            The t2flow/scufl2 workflow that needs to be converted to an RO.
      */
-    public Wf2ROConverter(URI serviceURI, WorkflowBundle wfbundle) {
-        this.serviceURI = serviceURI;
+    public Wf2ROConverter(WorkflowBundle wfbundle) {
         this.wfbundle = wfbundle;
     }
 
@@ -159,7 +153,8 @@ public abstract class Wf2ROConverter {
                 }
             }
         }).start();
-        uploadAggregatedResource(wfURI, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE, in);
+        uploadAggregatedResource(roURI, wfUUID.toString(), in,
+            RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
         return wfURI;
 
     }
@@ -180,43 +175,26 @@ public abstract class Wf2ROConverter {
      */
     protected URI addRoEvoAnnotation(URI roURI, final WorkflowBundle wfbundle, URI rodlWfURI)
             throws IOException {
+        final PipedInputStream in = new PipedInputStream();
+        final PipedOutputStream out = new PipedOutputStream(in);
+        new Thread(new Runnable() {
 
-        OntModel manifest = createManifestModel(roURI);
-        URI annotationBodyURI = createAnnotationBodyURI(roURI, rodlWfURI);
-        URI annotationURI = createAnnotationURI(manifest, roURI);
-        ROService
-                .addAnnotationToManifestModel(manifest, roURI, annotationURI, rodlWfURI, annotationBodyURI, serviceURI);
-        uploadManifest(roURI, manifest);
-
-        try {
-            final PipedInputStream in = new PipedInputStream();
-            final PipedOutputStream out = new PipedOutputStream(in);
-            new Thread(new Runnable() {
-
-                public void run() {
-                    ROEvoSerializer roEvo = new ROEvoSerializer();
+            public void run() {
+                ROEvoSerializer roEvo = new ROEvoSerializer();
+                try {
+                    roEvo.workflowHistory(wfbundle.getMainWorkflow(), out);
+                } catch (WriterException e) {
+                    LOG.error("Can't download workflow desc", e);
+                } finally {
                     try {
-                        roEvo.workflowHistory(wfbundle.getMainWorkflow(), out);
-                    } catch (WriterException e) {
-                        LOG.error("Can't download workflow desc", e);
-                    } finally {
-                        try {
-                            out.close();
-                        } catch (IOException e) {
-                            LOG.warn("Exception when closing the annotation body output stream", e);
-                        }
+                        out.close();
+                    } catch (IOException e) {
+                        LOG.warn("Exception when closing the annotation body output stream", e);
                     }
                 }
-            }).start();
-            uploadAggregatedResource(annotationBodyURI, TEXT_TURTLE, in);
-            return annotationBodyURI;
-        } catch (IOException e) {
-            manifest = createManifestModel(roURI); // a to nie rzuca wyjatku? dodac try/catch i log
-            ROService.deleteAnnotationFromManifest(manifest, annotationURI);
-            uploadManifest(roURI, manifest);
-            throw new IOException("Can't upload annotation body", e);
-        }
-
+            }
+        }).start();
+        return uploadAnnotation(roURI, Arrays.asList(rodlWfURI), in, TEXT_TURTLE);
     }
 
 
@@ -235,68 +213,25 @@ public abstract class Wf2ROConverter {
      */
     protected URI addWfDescAnnotation(URI roURI, final WorkflowBundle wfbundle, URI rodlWfURI)
             throws IOException {
-        OntModel manifest = createManifestModel(roURI);
-        URI annotationBodyURI = createAnnotationBodyURI(roURI, rodlWfURI);
-        URI annotationURI = createAnnotationURI(manifest, roURI);
-        ROService
-                .addAnnotationToManifestModel(manifest, roURI, annotationURI, rodlWfURI, annotationBodyURI, serviceURI);
-        uploadManifest(roURI, manifest);
+        final PipedInputStream in = new PipedInputStream();
+        final PipedOutputStream out = new PipedOutputStream(in);
+        new Thread(new Runnable() {
 
-        try {
-            final PipedInputStream in = new PipedInputStream();
-            final PipedOutputStream out = new PipedOutputStream(in);
-            new Thread(new Runnable() {
-
-                public void run() {
+            public void run() {
+                try {
+                    bundleIO.writeBundle(wfbundle, out, TEXT_VND_WF4EVER_WFDESC_TURTLE);
+                } catch (WriterException | IOException e) {
+                    LOG.error("Can't download workflow desc", e);
+                } finally {
                     try {
-                        bundleIO.writeBundle(wfbundle, out, TEXT_VND_WF4EVER_WFDESC_TURTLE);
-                    } catch (WriterException | IOException e) {
-                        LOG.error("Can't download workflow desc", e);
-                    } finally {
-                        try {
-                            out.close();
-                        } catch (IOException e) {
-                            LOG.warn("Exception when closing the annotation body output stream", e);
-                        }
+                        out.close();
+                    } catch (IOException e) {
+                        LOG.warn("Exception when closing the annotation body output stream", e);
                     }
                 }
-            }).start();
-            uploadAggregatedResource(annotationBodyURI, TEXT_TURTLE, in);
-            return annotationBodyURI;
-        } catch (IOException e) {
-            manifest = createManifestModel(roURI); // a to nie rzuca wyjatku? dodac try/catch i log
-            ROService.deleteAnnotationFromManifest(manifest, annotationURI);
-            uploadManifest(roURI, manifest);
-            throw new IOException("Can't upload annotation body", e);
-        }
-    }
-
-
-    /**
-     * Create an annotation URI. By default calls {@link ROService#createAnnotationURI(OntModel, URI)}.
-     * 
-     * @param manifest
-     *            the manifest model
-     * @param roURI
-     *            RO URI
-     * @return the annotation URI
-     */
-    protected URI createAnnotationURI(OntModel manifest, URI roURI) {
-        return ROService.createAnnotationURI(manifest, roURI);
-    }
-
-
-    /**
-     * Create an annotation body URI. By default calls {@link ROService#createAnnotationBodyURI(URI, URI)}.
-     * 
-     * @param roURI
-     *            RO URI
-     * @param rodlWfURI
-     *            workflow URI
-     * @return annotation body URI
-     */
-    protected URI createAnnotationBodyURI(URI roURI, URI rodlWfURI) {
-        return ROService.createAnnotationBodyURI(roURI, rodlWfURI);
+            }
+        }).start();
+        return uploadAnnotation(roURI, Arrays.asList(rodlWfURI), in, TEXT_TURTLE);
     }
 
 
@@ -315,8 +250,10 @@ public abstract class Wf2ROConverter {
     /**
      * Saves an aggregated resource to RODL.
      * 
-     * @param resourceURI
-     *            resource URI
+     * @param researchObject
+     *            research object URI
+     * @param path
+     *            the resource path
      * @param contentType
      *            resource content type to be sent as in HTTP request
      * @param in
@@ -324,7 +261,26 @@ public abstract class Wf2ROConverter {
      * @throws IOException
      *             when there are problems with uploading the resource
      */
-    protected abstract void uploadAggregatedResource(URI resourceURI, String contentType, InputStream in)
+    protected abstract void uploadAggregatedResource(URI researchObject, String path, InputStream in, String contentType)
+            throws IOException;
+
+
+    /**
+     * Saves a resource in RODL as an annotation body of another resource.
+     * 
+     * @param researchObject
+     *            research object URI
+     * @param targets
+     *            list of URIs of resources that are annotated
+     * @param contentType
+     *            content type
+     * @param in
+     *            resource input stream
+     * @return annotation body URI
+     * @throws IOException
+     *             when there are problems with uploading the resource
+     */
+    protected abstract URI uploadAnnotation(URI researchObject, List<URI> targets, InputStream in, String contentType)
             throws IOException;
 
 
@@ -336,17 +292,6 @@ public abstract class Wf2ROConverter {
      * @return the Jena model of the manifest
      */
     protected abstract OntModel createManifestModel(URI roURI);
-
-
-    /**
-     * Upload the manifest to RODL.
-     * 
-     * @param roURI
-     *            research object URI
-     * @param manifest
-     *            the Jena model of the manifest
-     */
-    protected abstract void uploadManifest(URI roURI, OntModel manifest);
 
 
     /**

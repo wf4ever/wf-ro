@@ -48,11 +48,11 @@ public class RestApiTest extends JerseyTest {
     private static final URI TAVERNA_FORMAT = URI.create(T2FlowReader.APPLICATION_VND_TAVERNA_T2FLOW_XML);
 
     /** RO URI, with a random UUID as ro id. */
-    private static final URI RO_URI = URI.create("http://sandbox.wf4ever-project.org/rosrs5/ROs/"
+    private static final URI RO_URI = URI.create("http://sandbox.wf4ever-project.org/rodl/ROs/"
             + UUID.randomUUID().toString() + "/");
 
     /** RO URI, with a random UUID as ro id. */
-    private static final URI RO2_URI = URI.create("http://sandbox.wf4ever-project.org/rosrs5/ROs/"
+    private static final URI RO2_URI = URI.create("http://sandbox.wf4ever-project.org/rodl/ROs/"
             + UUID.randomUUID().toString() + "/");
 
     /** RODL access token, currently assigned to Piotr. */

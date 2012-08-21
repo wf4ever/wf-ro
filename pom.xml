@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.purl.wf4ever</groupId>
 	<artifactId>wf-ro</artifactId>
-	<version>0.3-SNAPSHOT</version>
+	<version>0.4-SNAPSHOT</version>
 	<packaging>war</packaging>
 	<name>Workflow to RO</name>
 	<description>Convert a t2flow workflow to an RO</description>
@@ -73,7 +73,7 @@
 		<dependency>
 			<groupId>org.purl.wf4ever</groupId>
 			<artifactId>rosrs-client-common</artifactId>
-			<version>1.0.2</version>
+			<version>2.0.0</version>
 		</dependency>
 		<dependency>
 			<groupId>javax.servlet</groupId>

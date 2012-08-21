@@ -139,7 +139,7 @@ public class RestApi implements JobsContainer {
         }
         UUID jobUUID = UUID.randomUUID();
         URI jobURI = uriInfo.getAbsolutePathBuilder().path(jobUUID.toString()).build();
-        Job job = new Job(uriInfo.getBaseUri(), jobUUID, resourceURI, formatURI, roURI, token, this);
+        Job job = new Job(jobUUID, resourceURI, formatURI, roURI, token, this);
         jobs.put(jobUUID, job);
         job.start();
         return Response.created(jobURI).build();

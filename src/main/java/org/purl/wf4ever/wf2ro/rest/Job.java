@@ -72,15 +72,10 @@ public class Job extends Thread {
     /** The converter. */
     private RodlConverter converter;
 
-    /** The service URI. */
-    private URI service;
-
 
     /**
      * Constructor.
      * 
-     * @param service
-     *            Service URI for the converter
      * @param jobUUID
      *            job identifier assigned by its container
      * @param resource
@@ -94,8 +89,7 @@ public class Job extends Thread {
      * @param container
      *            the object that created this job
      */
-    public Job(URI service, UUID jobUUID, URI resource, URI format, URI ro, String token, JobsContainer container) {
-        this.service = service;
+    public Job(UUID jobUUID, URI resource, URI format, URI ro, String token, JobsContainer container) {
         this.uuid = jobUUID;
         this.resource = resource;
         this.format = format;
@@ -113,7 +107,7 @@ public class Job extends Thread {
         WorkflowBundleIO io = new WorkflowBundleIO();
         try {
             WorkflowBundle wfbundle = io.readBundle(resource.toURL(), format.toString());
-            converter = new RodlConverter(service, wfbundle, ro, this.token);
+            converter = new RodlConverter(wfbundle, ro, this.token);
             converter.convert();
             state = State.DONE;
         } catch (ReaderException | IOException e) {
