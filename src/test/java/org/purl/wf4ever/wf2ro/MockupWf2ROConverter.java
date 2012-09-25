@@ -88,7 +88,7 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
 
 
     @Override
-    protected URI addWorkflowBundle(URI roURI, WorkflowBundle wfbundle, UUID wfUUID)
+    protected URI addWorkflowBundle(URI roURI, WorkflowBundle wfbundle, String wfUUID)
             throws IOException, ROSRSException, WriterException {
         URI wfURI = super.addWorkflowBundle(roURI, wfbundle, wfUUID);
         Resource ro = manifest.createResource(roURI.toString());

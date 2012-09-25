@@ -91,6 +91,7 @@ public abstract class Wf2ROConverter {
             running = true;
         }
         UUID wfUUID = getWorkflowBundleUUID(wfbundle);
+        String wfname = wfbundle.getMainWorkflow().getName();
         URI roURI = null;
         try {
             roURI = createResearchObject(wfUUID);
@@ -100,7 +101,7 @@ public abstract class Wf2ROConverter {
         }
         URI wfURI;
         try {
-            wfURI = addWorkflowBundle(roURI, wfbundle, wfUUID);
+            wfURI = addWorkflowBundle(roURI, wfbundle, wfname);
             resourcesAdded.add(wfURI);
         } catch (IOException | ROSRSException | WriterException e) {
             LOG.error("Can't upload workflow bundle", e);
@@ -150,15 +151,15 @@ public abstract class Wf2ROConverter {
      *            research object URI
      * @param wfbundle
      *            the workflow bundle
-     * @param wfUUID
-     *            workflow bundle UUID
+     * @param wfID
+     *            workflow bundle id
      * @return the workflow bundle URI as in the manifest or null if uploading failed
      * @throws IOException
      *             when there was a problem with getting/uploading the RO resources
      * @throws ROSRSException
      * @throws WriterException
      */
-    protected URI addWorkflowBundle(URI roURI, final WorkflowBundle wfbundle, UUID wfUUID)
+    protected URI addWorkflowBundle(URI roURI, final WorkflowBundle wfbundle, String wfID)
             throws IOException, ROSRSException, WriterException {
         final File temp = File.createTempFile("wf-ro", ".wfbundle");
         // Delete temp file when program exits.
@@ -185,7 +186,7 @@ public abstract class Wf2ROConverter {
             }
             LOG.debug("Mime type is: " + entryMimeType);
             //TODO workflow UUID is volatile, we might change it in the future
-            String roEntryPath = wfUUID.toString() + "/" + entryName;
+            String roEntryPath = wfID + "/" + entryName;
 
             uploadAggregatedResource(roURI, roEntryPath, zip.getInputStream(entry), entryMimeType);
             //TODO make it depend on the URI returned by RODL
@@ -194,7 +195,7 @@ public abstract class Wf2ROConverter {
         zip.close();
         temp.delete();
 
-        return roURI.resolve(wfUUID.toString());
+        return roURI.resolve(wfID);
     }
 
 
