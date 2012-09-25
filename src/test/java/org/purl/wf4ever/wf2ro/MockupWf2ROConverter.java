@@ -1,5 +1,6 @@
 package org.purl.wf4ever.wf2ro;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -9,6 +10,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.apache.commons.io.IOUtils;
+import org.purl.wf4ever.rosrs.client.common.ROSRSException;
 import org.purl.wf4ever.rosrs.client.common.Vocab;
 
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
@@ -65,7 +67,7 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
 
     @Override
     protected URI addWorkflowBundle(URI roURI, WorkflowBundle wfbundle, UUID wfUUID)
-            throws IOException {
+            throws IOException, ROSRSException {
         URI wfURI = super.addWorkflowBundle(roURI, wfbundle, wfUUID);
         Resource ro = manifest.createResource(roURI.toString());
         Individual res = manifest.createIndividual(wfURI.toString(), Vocab.RO_RESOURCE);
@@ -93,10 +95,30 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
         resources.put(body, IOUtils.toString(in));
         Resource ro = manifest.createResource(researchObject.toString());
         Individual res = manifest.createIndividual(ann.toString(), Vocab.RO_AGGREGATED_ANNOTATION);
+        Resource bodyInd = manifest.createResource(body.toString());
         ro.addProperty(Vocab.ORE_AGGREGATES, res);
+        res.addProperty(Vocab.AO_BODY, bodyInd);
         Individual res2 = manifest.createIndividual(body.toString(), Vocab.RO_RESOURCE);
         ro.addProperty(Vocab.ORE_AGGREGATES, res2);
         return ann;
+    }
+
+
+    @Override
+    protected void aggregateResource(URI researchObject, URI resource) {
+        resources.put(resource, null);
+        Resource ro = manifest.createResource(researchObject.toString());
+        Individual res = manifest.createIndividual(resource.toString(), Vocab.RO_RESOURCE);
+        ro.addProperty(Vocab.ORE_AGGREGATES, res);
+    }
+
+
+    @Override
+    public void readModelFromUri(OntModel model, URI wfdescURI) {
+        Individual res = manifest.getIndividual(wfdescURI.toString());
+        URI body = URI.create(res.getPropertyResourceValue(Vocab.AO_BODY).getURI());
+
+        model.read(new ByteArrayInputStream(resources.get(body).getBytes()), null);
     }
 
 }

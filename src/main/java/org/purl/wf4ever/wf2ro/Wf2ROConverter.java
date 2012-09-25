@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.apache.log4j.Logger;
+import org.purl.wf4ever.rosrs.client.common.ROSRSException;
 import org.purl.wf4ever.wfdesc.scufl2.ROEvoSerializer;
 
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
@@ -23,6 +24,10 @@ import uk.org.taverna.scufl2.api.io.WriterException;
 import uk.org.taverna.scufl2.rdfxml.RDFXMLReader;
 
 import com.hp.hpl.jena.ontology.OntModel;
+import com.hp.hpl.jena.ontology.OntModelSpec;
+import com.hp.hpl.jena.rdf.model.ModelFactory;
+import com.hp.hpl.jena.rdf.model.Property;
+import com.hp.hpl.jena.rdf.model.RDFNode;
 
 /**
  * This class defines the main logic of workflow-RO conversion. It is abstract because it leaves the resource upload
@@ -82,24 +87,41 @@ public abstract class Wf2ROConverter {
             running = true;
         }
         UUID wfUUID = getWorkflowBundleUUID(wfbundle);
-        URI roURI = createResearchObject(wfUUID);
+        URI roURI = null;
+        try {
+            roURI = createResearchObject(wfUUID);
+        } catch (ROSRSException e) {
+            LOG.error("Can't create RO", e);
+            return;
+        }
         URI wfURI;
         try {
             wfURI = addWorkflowBundle(roURI, wfbundle, wfUUID);
             resourcesAdded.add(wfURI);
-        } catch (IOException e) {
+        } catch (IOException | ROSRSException e) {
             LOG.error("Can't upload workflow bundle", e);
             return;
         }
+        URI wfdescURI = null;
         try {
-            resourcesAdded.add(addWfDescAnnotation(roURI, wfbundle, wfURI));
-        } catch (IOException e) {
+            wfdescURI = addWfDescAnnotation(roURI, wfbundle, wfURI);
+            resourcesAdded.add(wfdescURI);
+        } catch (IOException | ROSRSException e) {
             LOG.error("Can't upload workflow desc", e);
         }
         try {
             resourcesAdded.add(addRoEvoAnnotation(roURI, wfbundle, wfURI));
-        } catch (IOException e) {
+        } catch (IOException | ROSRSException e) {
             LOG.error("Can't upload RO evolution desc", e);
+        }
+        try {
+            if (wfdescURI != null) {
+                aggregateWorkflowDependencies(roURI, wfdescURI);
+            } else {
+                LOG.error("Can't read the workflow desc");
+            }
+        } catch (ROSRSException e) {
+            LOG.error("Can't aggregate resources", e);
         }
     }
 
@@ -129,9 +151,10 @@ public abstract class Wf2ROConverter {
      * @return the workflow bundle URI as in the manifest or null if uploading failed
      * @throws IOException
      *             when there was a problem with getting/uploading the RO resources
+     * @throws ROSRSException
      */
     protected URI addWorkflowBundle(URI roURI, final WorkflowBundle wfbundle, UUID wfUUID)
-            throws IOException {
+            throws IOException, ROSRSException {
         URI wfURI = roURI.resolve(wfUUID.toString());
 
         final PipedInputStream in = new PipedInputStream();
@@ -172,9 +195,10 @@ public abstract class Wf2ROConverter {
      * @return the annotation body URI
      * @throws IOException
      *             when there was a problem with getting/uploading the RO resources
+     * @throws ROSRSException
      */
     protected URI addRoEvoAnnotation(URI roURI, final WorkflowBundle wfbundle, URI rodlWfURI)
-            throws IOException {
+            throws IOException, ROSRSException {
         final PipedInputStream in = new PipedInputStream();
         final PipedOutputStream out = new PipedOutputStream(in);
         new Thread(new Runnable() {
@@ -210,9 +234,11 @@ public abstract class Wf2ROConverter {
      * @return the annotation body URI
      * @throws IOException
      *             when there was a problem with getting/uploading the RO resources
+     * @throws ROSRSException
+     *             when there was a problem with getting/uploading the RO resources
      */
     protected URI addWfDescAnnotation(URI roURI, final WorkflowBundle wfbundle, URI rodlWfURI)
-            throws IOException {
+            throws IOException, ROSRSException {
         final PipedInputStream in = new PipedInputStream();
         final PipedOutputStream out = new PipedOutputStream(in);
         new Thread(new Runnable() {
@@ -236,6 +262,48 @@ public abstract class Wf2ROConverter {
 
 
     /**
+     * Search for external resources in the wfdesc description and aggregate them in the RO.
+     * 
+     * @param researchObject
+     *            research object URI
+     * @param wfdescURI
+     *            workflow description URI
+     * @throws ROSRSException
+     *             when there was a problem with uploading the RO resources
+     */
+    private void aggregateWorkflowDependencies(URI researchObject, URI wfdescURI)
+            throws ROSRSException {
+        OntModel model = ModelFactory.createOntologyModel(OntModelSpec.OWL_LITE_MEM);
+        readModelFromUri(model, wfdescURI);
+        Property wsdlUri = model.createProperty("http://purl.org/wf4ever/wf4ever#wsdlURI");
+        List<RDFNode> wsdls = model.listObjectsOfProperty(wsdlUri).toList();
+        for (RDFNode wsdl : wsdls) {
+            if (wsdl.isLiteral()) {
+                if ("http://www.w3.org/2001/XMLSchema#anyURI".equals(wsdl.asLiteral().getDatatypeURI())) {
+                    URI wsdlURI = URI.create(wsdl.asLiteral().getString());
+                    aggregateResource(researchObject, wsdlURI);
+                } else {
+                    LOG.error("The WSDL URI was not a Literal, skipping: " + wsdl.toString());
+                }
+            } else {
+                LOG.error("The WSDL URI was not a Literal, skipping: " + wsdl.toString());
+            }
+        }
+    }
+
+
+    /**
+     * Read a model given a URI. RDF/XML is assumed.
+     * 
+     * @param model
+     *            Ont model
+     * @param wfdescURI
+     *            RDF/XML source URI
+     */
+    public abstract void readModelFromUri(OntModel model, URI wfdescURI);
+
+
+    /**
      * Create a new research object or, if it exists, prepare it for uploading workflows, i.e. preserve the previous
      * workflow versions.
      * 
@@ -243,8 +311,10 @@ public abstract class Wf2ROConverter {
      *            UUID of the workflow bundle that will be uploaded later.
      * 
      * @return the research object URI
+     * @throws ROSRSException
      */
-    protected abstract URI createResearchObject(UUID wfUUID);
+    protected abstract URI createResearchObject(UUID wfUUID)
+            throws ROSRSException;
 
 
     /**
@@ -260,9 +330,25 @@ public abstract class Wf2ROConverter {
      *            resource input stream
      * @throws IOException
      *             when there are problems with uploading the resource
+     * @throws ROSRSException
      */
     protected abstract void uploadAggregatedResource(URI researchObject, String path, InputStream in, String contentType)
-            throws IOException;
+            throws IOException, ROSRSException;
+
+
+    /**
+     * Saves an URI as an aggregated resource of an RO in RODL.
+     * 
+     * @param researchObject
+     *            research object URI
+     * @param resource
+     *            resource URI
+     * @throws ROSRSException
+     *             when there are problems with uploading the resource
+     * @throws ROSRSException
+     */
+    protected abstract void aggregateResource(URI researchObject, URI resource)
+            throws ROSRSException;
 
 
     /**
@@ -277,11 +363,12 @@ public abstract class Wf2ROConverter {
      * @param in
      *            resource input stream
      * @return annotation body URI
-     * @throws IOException
+     * @throws ROSRSException
      *             when there are problems with uploading the resource
+     * @throws IOException
      */
     protected abstract URI uploadAnnotation(URI researchObject, List<URI> targets, InputStream in, String contentType)
-            throws IOException;
+            throws ROSRSException, IOException;
 
 
     /**

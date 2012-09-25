@@ -15,6 +15,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.junit.After;
 import org.junit.Test;
+import org.purl.wf4ever.rosrs.client.common.ROSRSException;
 import org.purl.wf4ever.rosrs.client.common.ROSRService;
 import org.purl.wf4ever.wf2ro.rest.Job.State;
 import org.scribe.model.Token;
@@ -66,7 +67,8 @@ public class RestApiTest extends JerseyTest {
 
     @After
     @Override
-    public void tearDown() {
+    public void tearDown()
+            throws ROSRSException {
         ROSRService.deleteResearchObject(RO_URI, TOKEN);
         ROSRService.deleteResearchObject(RO2_URI, TOKEN);
     }
