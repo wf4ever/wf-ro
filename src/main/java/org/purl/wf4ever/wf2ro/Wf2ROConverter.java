@@ -13,6 +13,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import org.apache.log4j.Logger;
 import org.purl.wf4ever.rosrs.client.common.ROSRSException;
@@ -123,6 +125,11 @@ public abstract class Wf2ROConverter {
         } catch (ROSRSException e) {
             LOG.error("Can't aggregate resources", e);
         }
+        try {
+            resourcesAdded.add(addRoEvoAnnotation(roURI, wfbundle, wfURI));
+        } catch (IOException | ROSRSException e) {
+            LOG.error("Can't upload RO evolution desc", e);
+        }
     }
 
 
@@ -140,7 +147,7 @@ public abstract class Wf2ROConverter {
 
 
     /**
-     * Upload the workflow bundle to RODL.
+     * Upload the workflow bundle and the resources it contains to RODL.
      * 
      * @param roURI
      *            research object URI
@@ -155,8 +162,6 @@ public abstract class Wf2ROConverter {
      */
     protected URI addWorkflowBundle(URI roURI, final WorkflowBundle wfbundle, UUID wfUUID)
             throws IOException, ROSRSException {
-        URI wfURI = roURI.resolve(wfUUID.toString());
-
         final PipedInputStream in = new PipedInputStream();
         final PipedOutputStream out = new PipedOutputStream(in);
         new Thread(new Runnable() {
@@ -176,10 +181,56 @@ public abstract class Wf2ROConverter {
                 }
             }
         }).start();
-        uploadAggregatedResource(roURI, wfUUID.toString(), in,
-            RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
-        return wfURI;
 
+        try (ZipInputStream zip = new ZipInputStream(in)) {
+            ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null) {
+                LOG.debug("Entry: " + entry.toString());
+                if (entry.isDirectory()) {
+                    LOG.debug("Entry is a directory, skipping");
+                    continue;
+                }
+                String entryName = entry.getName();
+                String entryMimeType = null;
+                if (wfbundle.getResources().listAllResources().containsKey(entryName)) {
+                    entryMimeType = wfbundle.getResources().getResourceEntry(entryName).getMediaType();
+                } else {
+                    entryMimeType = "application/xml";
+                }
+                LOG.debug("Mime type is: " + entryMimeType);
+                //TODO workflow UUID is volatile, we might change it in the future
+                String roEntryPath = wfUUID.toString() + "/" + entryName;
+
+                final PipedInputStream entryin = new PipedInputStream();
+                final PipedOutputStream entryout = new PipedOutputStream(entryin);
+                new Thread(new Runnable() {
+
+                    public void run() {
+                        try {
+                            byte[] buffer = new byte[4096];
+                            int numBytes;
+                            while ((numBytes = zip.read(buffer, 0, buffer.length)) != -1) {
+                                LOG.debug("writing " + numBytes + " bytes");
+                                entryout.write(buffer, 0, numBytes);
+                            }
+                        } catch (IOException e) {
+                            LOG.error("Couldn't save a zip entry", e);
+                        } finally {
+                            try {
+                                entryout.close();
+                            } catch (IOException e) {
+                                LOG.warn("Exception when closing the entry output stream", e);
+                            }
+                        }
+                    }
+                }).start();
+
+                uploadAggregatedResource(roURI, roEntryPath, entryin, entryMimeType);
+                //TODO make it depend on the URI returned by RODL
+                resourcesAdded.add(roURI.resolve(roEntryPath));
+            }
+        }
+        return roURI.resolve(wfUUID.toString());
     }
 
 
