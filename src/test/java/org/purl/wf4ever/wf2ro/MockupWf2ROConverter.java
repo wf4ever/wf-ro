@@ -38,6 +38,9 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
     /** RO URI. */
     public static final URI RO_URI = URI.create("http://example.org/ROs/ro1/");
 
+    /** Used for ann bodies. */
+    private int annCnt = 0;
+
 
     /**
      * Constructor.
@@ -85,14 +88,20 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
     @Override
     protected void uploadAggregatedResource(URI researchObject, String path, InputStream in, String contentType)
             throws IOException {
+        URI uri = researchObject.resolve(path);
+        resources.put(uri, IOUtils.toString(in));
+        Resource ro = manifest.createResource(researchObject.toString());
+        Individual res = manifest.createIndividual(uri.toString(), Vocab.RO_RESOURCE);
+        ro.addProperty(Vocab.ORE_AGGREGATES, res);
     }
 
 
     @Override
     protected URI uploadAnnotation(URI researchObject, List<URI> targets, InputStream in, String contentType)
             throws IOException {
-        URI ann = researchObject.resolve(".ro/ann-" + UUID.randomUUID().toString());
-        URI body = researchObject.resolve(".ro/body-" + UUID.randomUUID().toString());
+        annCnt++;
+        URI ann = researchObject.resolve(".ro/ann-" + annCnt);
+        URI body = researchObject.resolve(".ro/body-" + annCnt);
         resources.put(body, IOUtils.toString(in));
         Resource ro = manifest.createResource(researchObject.toString());
         Individual res = manifest.createIndividual(ann.toString(), Vocab.RO_AGGREGATED_ANNOTATION);
@@ -119,7 +128,7 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
         Individual res = manifest.getIndividual(wfdescURI.toString());
         URI body = URI.create(res.getPropertyResourceValue(Vocab.AO_BODY).getURI());
 
-        model.read(new ByteArrayInputStream(resources.get(body).getBytes()), null);
+        model.read(new ByteArrayInputStream(resources.get(body).getBytes()), null, "TURTLE");
     }
 
 }

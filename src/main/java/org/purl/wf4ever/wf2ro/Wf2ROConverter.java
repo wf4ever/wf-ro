@@ -127,11 +127,6 @@ public abstract class Wf2ROConverter {
         } catch (ROSRSException e) {
             LOG.error("Can't aggregate resources", e);
         }
-        try {
-            resourcesAdded.add(addRoEvoAnnotation(roURI, wfbundle, wfURI));
-        } catch (IOException | ROSRSException e) {
-            LOG.error("Can't upload RO evolution desc", e);
-        }
     }
 
 
