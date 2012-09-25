@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,23 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
 
     /** Used for ann bodies. */
     private int annCnt = 0;
+
+    /** Resources expected to be generated. */
+    public static final List<String> EXPECTED_RESOURCES = Arrays
+            .asList(
+                "http://example.org/ROs/ro1/01348671-5aaa-4cc2-84cc-477329b70b0d",
+                "http://example.org/ROs/ro1/01348671-5aaa-4cc2-84cc-477329b70b0d/profile/taverna-2.2.0.rdf",
+                "http://example.org/ROs/ro1/01348671-5aaa-4cc2-84cc-477329b70b0d/META-INF/container.xml",
+                "http://example.org/ROs/ro1/01348671-5aaa-4cc2-84cc-477329b70b0d/history/01348671-5aaa-4cc2-84cc-477329b70b0d.t2flow",
+                "http://example.org/ROs/ro1/01348671-5aaa-4cc2-84cc-477329b70b0d/workflow/Hello_Anyone.rdf",
+                "http://example.org/ROs/ro1/01348671-5aaa-4cc2-84cc-477329b70b0d/mimetype",
+                "http://example.org/ROs/ro1/01348671-5aaa-4cc2-84cc-477329b70b0d/workflowBundle.rdf",
+                "http://example.org/ROs/ro1/01348671-5aaa-4cc2-84cc-477329b70b0d/META-INF/manifest.xml",
+                "http://example.org/ROs/ro1/.ro/body-1", "http://example.org/ROs/ro1/.ro/body-2");
+
+    /** Annotations expected to be generated. */
+    public static final List<String> EXPECTED_ANNOTATIONS = Arrays.asList("http://example.org/ROs/ro1/.ro/ann-1",
+        "http://example.org/ROs/ro1/.ro/ann-2");
 
 
     /**

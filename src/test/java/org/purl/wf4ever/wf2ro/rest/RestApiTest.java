@@ -17,6 +17,7 @@ import org.junit.After;
 import org.junit.Test;
 import org.purl.wf4ever.rosrs.client.common.ROSRSException;
 import org.purl.wf4ever.rosrs.client.common.ROSRService;
+import org.purl.wf4ever.wf2ro.MockupWf2ROConverter;
 import org.purl.wf4ever.wf2ro.rest.Job.State;
 import org.scribe.model.Token;
 
@@ -111,32 +112,13 @@ public class RestApiTest extends JerseyTest {
         URI jobURI = response.getLocation();
         response.close();
 
-        //        ClientResponse response2 = webResource.path("jobs").type(MediaType.APPLICATION_JSON_TYPE)
-        //                .post(ClientResponse.class, config);
-        //        assertEquals(HttpServletResponse.SC_CREATED, response2.getStatus());
-        //        URI job2URI = response2.getLocation();
-        //        response2.close();
-
         JobStatus status = null;
-
-        //        status = webResource.uri(job2URI).get(JobStatus.class);
-        //        assertTrue(status.getStatus() == State.RUNNING || status.getStatus() == State.DONE);
-        //        assertEquals(WF_URI, status.getResource());
-        //        assertEquals(TAVERNA_FORMAT, status.getFormat());
-        //        assertEquals(RO2_URI, status.getRo());
-        //
-        //        response2 = webResource.uri(job2URI).delete(ClientResponse.class);
-        //        assertEquals(HttpServletResponse.SC_NO_CONTENT, response2.getStatus());
-        //        response2.close();
-        //        response2 = webResource.uri(job2URI).get(ClientResponse.class);
-        //        assertEquals(HttpServletResponse.SC_GONE, response2.getStatus());
-        //        response2.close();
 
         for (int i = 0; i < MAX_JOB_TIME_S; i++) {
             System.out.print(".");
             status = webResource.uri(jobURI).get(JobStatus.class);
             assertTrue("Status is: " + status.getStatus().toString(),
-                    status.getStatus() == State.RUNNING || status.getStatus() == State.DONE);
+                status.getStatus() == State.RUNNING || status.getStatus() == State.DONE);
             assertEquals(WF_URI, status.getResource());
             assertEquals(TAVERNA_FORMAT, status.getFormat());
             assertEquals(RO_URI, status.getRo());
@@ -151,6 +133,6 @@ public class RestApiTest extends JerseyTest {
             fail("The job hasn't finished on time");
         }
         assertNotNull(status.getAdded());
-        assertEquals(3, status.getAdded().size());
+        assertEquals(MockupWf2ROConverter.EXPECTED_RESOURCES.size(), status.getAdded().size());
     }
 }
