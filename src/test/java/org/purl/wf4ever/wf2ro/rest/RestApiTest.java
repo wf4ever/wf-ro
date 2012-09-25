@@ -135,7 +135,8 @@ public class RestApiTest extends JerseyTest {
         for (int i = 0; i < MAX_JOB_TIME_S; i++) {
             System.out.print(".");
             status = webResource.uri(jobURI).get(JobStatus.class);
-            assertTrue(status.getStatus() == State.RUNNING || status.getStatus() == State.DONE);
+            assertTrue("Status is: " + status.getStatus().toString(),
+                    status.getStatus() == State.RUNNING || status.getStatus() == State.DONE);
             assertEquals(WF_URI, status.getResource());
             assertEquals(TAVERNA_FORMAT, status.getFormat());
             assertEquals(RO_URI, status.getRo());
