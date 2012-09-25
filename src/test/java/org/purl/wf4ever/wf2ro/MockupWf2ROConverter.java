@@ -14,6 +14,7 @@ import org.purl.wf4ever.rosrs.client.common.ROSRSException;
 import org.purl.wf4ever.rosrs.client.common.Vocab;
 
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
+import uk.org.taverna.scufl2.api.io.WriterException;
 
 import com.hp.hpl.jena.ontology.Individual;
 import com.hp.hpl.jena.ontology.OntModel;
@@ -67,7 +68,7 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
 
     @Override
     protected URI addWorkflowBundle(URI roURI, WorkflowBundle wfbundle, UUID wfUUID)
-            throws IOException, ROSRSException {
+            throws IOException, ROSRSException, WriterException {
         URI wfURI = super.addWorkflowBundle(roURI, wfbundle, wfUUID);
         Resource ro = manifest.createResource(roURI.toString());
         Individual res = manifest.createIndividual(wfURI.toString(), Vocab.RO_RESOURCE);

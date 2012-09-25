@@ -3,6 +3,7 @@
  */
 package org.purl.wf4ever.wf2ro;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PipedInputStream;
@@ -11,10 +12,11 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
+import java.util.zip.ZipFile;
 
 import org.apache.log4j.Logger;
 import org.purl.wf4ever.rosrs.client.common.ROSRSException;
@@ -100,7 +102,7 @@ public abstract class Wf2ROConverter {
         try {
             wfURI = addWorkflowBundle(roURI, wfbundle, wfUUID);
             resourcesAdded.add(wfURI);
-        } catch (IOException | ROSRSException e) {
+        } catch (IOException | ROSRSException | WriterException e) {
             LOG.error("Can't upload workflow bundle", e);
             return;
         }
@@ -159,77 +161,44 @@ public abstract class Wf2ROConverter {
      * @throws IOException
      *             when there was a problem with getting/uploading the RO resources
      * @throws ROSRSException
+     * @throws WriterException
      */
     protected URI addWorkflowBundle(URI roURI, final WorkflowBundle wfbundle, UUID wfUUID)
-            throws IOException, ROSRSException {
-        final PipedInputStream in = new PipedInputStream();
-        final PipedOutputStream out = new PipedOutputStream(in);
-        new Thread(new Runnable() {
+            throws IOException, ROSRSException, WriterException {
+        final File temp = File.createTempFile("wf-ro", ".wfbundle");
+        // Delete temp file when program exits.
+        temp.deleteOnExit();
 
-            public void run() {
-                Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-                try {
-                    bundleIO.writeBundle(wfbundle, out, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
-                } catch (WriterException | IOException e) {
-                    LOG.error("Can't download workflow bundle", e);
-                } finally {
-                    try {
-                        out.close();
-                    } catch (IOException e) {
-                        LOG.warn("Exception when closing the workflow bundle output stream", e);
-                    }
-                }
+        Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+        bundleIO.writeBundle(wfbundle, temp, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
+
+        ZipFile zip = new ZipFile(temp);
+        Enumeration<? extends ZipEntry> entries = zip.entries();
+        while (entries.hasMoreElements()) {
+            ZipEntry entry = entries.nextElement();
+            LOG.debug("Entry: " + entry.toString());
+            if (entry.isDirectory()) {
+                LOG.debug("Entry is a directory, skipping");
+                continue;
             }
-        }).start();
-
-        try (ZipInputStream zip = new ZipInputStream(in)) {
-            ZipEntry entry;
-            while ((entry = zip.getNextEntry()) != null) {
-                LOG.debug("Entry: " + entry.toString());
-                if (entry.isDirectory()) {
-                    LOG.debug("Entry is a directory, skipping");
-                    continue;
-                }
-                String entryName = entry.getName();
-                String entryMimeType = null;
-                if (wfbundle.getResources().listAllResources().containsKey(entryName)) {
-                    entryMimeType = wfbundle.getResources().getResourceEntry(entryName).getMediaType();
-                } else {
-                    entryMimeType = "application/xml";
-                }
-                LOG.debug("Mime type is: " + entryMimeType);
-                //TODO workflow UUID is volatile, we might change it in the future
-                String roEntryPath = wfUUID.toString() + "/" + entryName;
-
-                final PipedInputStream entryin = new PipedInputStream();
-                final PipedOutputStream entryout = new PipedOutputStream(entryin);
-                new Thread(new Runnable() {
-
-                    public void run() {
-                        try {
-                            byte[] buffer = new byte[4096];
-                            int numBytes;
-                            while ((numBytes = zip.read(buffer, 0, buffer.length)) != -1) {
-                                LOG.debug("writing " + numBytes + " bytes");
-                                entryout.write(buffer, 0, numBytes);
-                            }
-                        } catch (IOException e) {
-                            LOG.error("Couldn't save a zip entry", e);
-                        } finally {
-                            try {
-                                entryout.close();
-                            } catch (IOException e) {
-                                LOG.warn("Exception when closing the entry output stream", e);
-                            }
-                        }
-                    }
-                }).start();
-
-                uploadAggregatedResource(roURI, roEntryPath, entryin, entryMimeType);
-                //TODO make it depend on the URI returned by RODL
-                resourcesAdded.add(roURI.resolve(roEntryPath));
+            String entryName = entry.getName();
+            String entryMimeType = null;
+            if (wfbundle.getResources().listAllResources().containsKey(entryName)) {
+                entryMimeType = wfbundle.getResources().getResourceEntry(entryName).getMediaType();
+            } else {
+                entryMimeType = "application/xml";
             }
+            LOG.debug("Mime type is: " + entryMimeType);
+            //TODO workflow UUID is volatile, we might change it in the future
+            String roEntryPath = wfUUID.toString() + "/" + entryName;
+
+            uploadAggregatedResource(roURI, roEntryPath, zip.getInputStream(entry), entryMimeType);
+            //TODO make it depend on the URI returned by RODL
+            resourcesAdded.add(roURI.resolve(roEntryPath));
         }
+        zip.close();
+        temp.delete();
+
         return roURI.resolve(wfUUID.toString());
     }
 
