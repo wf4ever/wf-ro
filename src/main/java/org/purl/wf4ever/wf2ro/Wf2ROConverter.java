@@ -282,6 +282,7 @@ public abstract class Wf2ROConverter {
                 if ("http://www.w3.org/2001/XMLSchema#anyURI".equals(wsdl.asLiteral().getDatatypeURI())) {
                     URI wsdlURI = URI.create(wsdl.asLiteral().getString());
                     aggregateResource(researchObject, wsdlURI);
+                    resourcesAdded.add(wsdlURI);
                 } else {
                     LOG.error("The WSDL URI was not a Literal, skipping: " + wsdl.toString());
                 }
