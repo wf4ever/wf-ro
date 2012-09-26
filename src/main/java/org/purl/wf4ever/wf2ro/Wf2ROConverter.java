@@ -4,6 +4,7 @@
 package org.purl.wf4ever.wf2ro;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PipedInputStream;
@@ -161,13 +162,17 @@ public abstract class Wf2ROConverter {
      */
     protected URI addWorkflowBundle(URI roURI, final WorkflowBundle wfbundle, String wfID)
             throws IOException, ROSRSException, WriterException {
+        //save the scufl2 wfbundle as a temporary file
         final File temp = File.createTempFile("wf-ro", ".wfbundle");
-        // Delete temp file when program exits.
         temp.deleteOnExit();
-
         Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
         bundleIO.writeBundle(wfbundle, temp, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
 
+        //save the scufl2
+        InputStream fileIn = new FileInputStream(temp);
+        uploadAggregatedResource(roURI, wfID, fileIn, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
+
+        //search for annotations
         ZipFile zip = new ZipFile(temp);
         Enumeration<? extends ZipEntry> entries = zip.entries();
         while (entries.hasMoreElements()) {
@@ -185,13 +190,16 @@ public abstract class Wf2ROConverter {
                 entryMimeType = "application/xml";
             }
             LOG.debug("Mime type is: " + entryMimeType);
-            //TODO workflow UUID is volatile, we might change it in the future
             String roEntryPath = wfID + "/" + entryName;
+
+            wfbundle.getAnnotations();
 
             uploadAggregatedResource(roURI, roEntryPath, zip.getInputStream(entry), entryMimeType);
             //TODO make it depend on the URI returned by RODL
             resourcesAdded.add(roURI.resolve(roEntryPath));
         }
+
+        //clean up
         zip.close();
         temp.delete();
 

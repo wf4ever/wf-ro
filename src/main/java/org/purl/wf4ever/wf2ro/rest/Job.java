@@ -57,8 +57,8 @@ public class Job extends Thread {
     /** Workflow URI. */
     private URI resource;
 
-    /** Workflow format URI. */
-    private URI format;
+    /** Workflow format MIME type. */
+    private String format;
 
     /** RO URI. */
     private URI ro;
@@ -89,7 +89,7 @@ public class Job extends Thread {
      * @param container
      *            the object that created this job
      */
-    public Job(UUID jobUUID, URI resource, URI format, URI ro, String token, JobsContainer container) {
+    public Job(UUID jobUUID, URI resource, String format, URI ro, String token, JobsContainer container) {
         this.uuid = jobUUID;
         this.resource = resource;
         this.format = format;
@@ -97,6 +97,9 @@ public class Job extends Thread {
         this.token = new Token(token, null);
         this.container = container;
         state = State.RUNNING;
+
+        LOG.debug(String.format("Created a new job:\n\tuuid = %s\n\tresource = %s\n\tformat = %s\t\nro=%s\t\n",
+            jobUUID, resource, format, ro));
 
         setDaemon(true);
     }
