@@ -3,8 +3,6 @@
  */
 package org.purl.wf4ever.wf2ro;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PipedInputStream;
@@ -13,16 +11,16 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.UUID;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
 import org.apache.log4j.Logger;
 import org.purl.wf4ever.rosrs.client.common.ROSRSException;
 import org.purl.wf4ever.wfdesc.scufl2.ROEvoSerializer;
 
+import uk.org.taverna.scufl2.api.annotation.Annotation;
+import uk.org.taverna.scufl2.api.common.NamedSet;
+import uk.org.taverna.scufl2.api.common.URITools;
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
 import uk.org.taverna.scufl2.api.io.WorkflowBundleIO;
 import uk.org.taverna.scufl2.api.io.WriterException;
@@ -120,15 +118,16 @@ public abstract class Wf2ROConverter {
         } catch (IOException | ROSRSException e) {
             LOG.error("Can't upload RO evolution desc", e);
         }
-        try {
-            if (wfdescURI != null) {
-                aggregateWorkflowDependencies(roURI, wfdescURI);
-            } else {
-                LOG.error("Can't read the workflow desc");
-            }
-        } catch (ROSRSException e) {
-            LOG.error("Can't aggregate resources", e);
-        }
+        //FIXME this causes Jena problems
+        //        try {
+        //            if (wfdescURI != null) {
+        //                aggregateWorkflowDependencies(roURI, wfdescURI);
+        //            } else {
+        //                LOG.error("Can't read the workflow desc");
+        //            }
+        //        } catch (ROSRSException e) {
+        //            LOG.error("Can't aggregate resources", e);
+        //        }
     }
 
 
@@ -162,46 +161,38 @@ public abstract class Wf2ROConverter {
      */
     protected URI addWorkflowBundle(URI roURI, final WorkflowBundle wfbundle, String wfID)
             throws IOException, ROSRSException, WriterException {
-        //save the scufl2 wfbundle as a temporary file
-        final File temp = File.createTempFile("wf-ro", ".wfbundle");
-        temp.deleteOnExit();
-        Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-        bundleIO.writeBundle(wfbundle, temp, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
-
         //save the scufl2
-        InputStream fileIn = new FileInputStream(temp);
-        uploadAggregatedResource(roURI, wfID, fileIn, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
+        final PipedInputStream in = new PipedInputStream();
+        final PipedOutputStream out = new PipedOutputStream(in);
+        new Thread(new Runnable() {
+
+            public void run() {
+                Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+                try {
+                    bundleIO.writeBundle(wfbundle, out, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
+                } catch (WriterException | IOException e) {
+                    LOG.error("Can't download workflow bundle", e);
+                } finally {
+                    try {
+                        out.close();
+                    } catch (IOException e) {
+                        LOG.warn("Exception when closing the workflow bundle output stream", e);
+                    }
+                }
+            }
+        }).start();
+        uploadAggregatedResource(roURI, wfID, in, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
 
         //search for annotations
-        ZipFile zip = new ZipFile(temp);
-        Enumeration<? extends ZipEntry> entries = zip.entries();
-        while (entries.hasMoreElements()) {
-            ZipEntry entry = entries.nextElement();
-            LOG.debug("Entry: " + entry.toString());
-            if (entry.isDirectory()) {
-                LOG.debug("Entry is a directory, skipping");
-                continue;
-            }
-            String entryName = entry.getName();
-            String entryMimeType = null;
-            if (wfbundle.getResources().listAllResources().containsKey(entryName)) {
-                entryMimeType = wfbundle.getResources().getResourceEntry(entryName).getMediaType();
-            } else {
-                entryMimeType = "application/xml";
-            }
-            LOG.debug("Mime type is: " + entryMimeType);
-            String roEntryPath = wfID + "/" + entryName;
-
-            wfbundle.getAnnotations();
-
-            uploadAggregatedResource(roURI, roEntryPath, zip.getInputStream(entry), entryMimeType);
-            //TODO make it depend on the URI returned by RODL
-            resourcesAdded.add(roURI.resolve(roEntryPath));
+        URITools tools = new URITools();
+        NamedSet<Annotation> annotations = wfbundle.getAnnotations();
+        for (Annotation annotation : annotations) {
+            InputStream annBody = wfbundle.getResources()
+                    .getResourceAsInputStream(annotation.getBody().toASCIIString());
+            URI target = tools.uriForBean(annotation.getTarget());
+            LOG.debug(String.format("Uploading annotation for %s taken from %s", target, annotation.getBody()));
+            uploadAnnotation(roURI, Arrays.asList(target), annBody, "application/rdf+xml");
         }
-
-        //clean up
-        zip.close();
-        temp.delete();
 
         return roURI.resolve(wfID);
     }

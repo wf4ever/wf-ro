@@ -98,7 +98,7 @@ public class Job extends Thread {
         this.container = container;
         state = State.RUNNING;
 
-        LOG.debug(String.format("Created a new job:\n\tuuid = %s\n\tresource = %s\n\tformat = %s\t\nro=%s\t\n",
+        LOG.debug(String.format("Created a new job:\n\tuuid = %s\n\tresource = %s\n\tformat = %s\n\tro=%s\t\n",
             jobUUID, resource, format, ro));
 
         setDaemon(true);
@@ -116,7 +116,7 @@ public class Job extends Thread {
         } catch (ReaderException | IOException e) {
             LOG.error("Can't download the resource", e);
             state = State.INVALID_RESOURCE;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             LOG.error("Unexpected exception during conversion", e);
             state = State.RUNTIME_ERROR;
         }
