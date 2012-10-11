@@ -44,18 +44,16 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
 
     /** Resources expected to be generated. */
     public static final List<String> EXPECTED_RESOURCES = Arrays.asList("http://example.org/ROs/ro1/Hello_Anyone",
-        "http://example.org/ROs/ro1/Hello_Anyone/profile/taverna-2.2.0.rdf",
-        "http://example.org/ROs/ro1/Hello_Anyone/META-INF/container.xml",
-        "http://example.org/ROs/ro1/Hello_Anyone/history/01348671-5aaa-4cc2-84cc-477329b70b0d.t2flow",
-        "http://example.org/ROs/ro1/Hello_Anyone/workflow/Hello_Anyone.rdf",
-        "http://example.org/ROs/ro1/Hello_Anyone/mimetype",
-        "http://example.org/ROs/ro1/Hello_Anyone/workflowBundle.rdf",
-        "http://example.org/ROs/ro1/Hello_Anyone/META-INF/manifest.xml", "http://example.org/ROs/ro1/.ro/body-1",
-        "http://example.org/ROs/ro1/.ro/body-2");
+        "http://example.org/ROs/ro1/.ro/body-wf-1", "http://example.org/ROs/ro1/.ro/body-wf-2",
+        "http://example.org/ROs/ro1/.ro/body-wf-3", "http://example.org/ROs/ro1/.ro/body-wf-4",
+        "http://example.org/ROs/ro1/.ro/body-wf-5", "http://example.org/ROs/ro1/.ro/body-wfdesc-6",
+        "http://example.org/ROs/ro1/.ro/body-roevo-7");
 
     /** Annotations expected to be generated. */
-    public static final List<String> EXPECTED_ANNOTATIONS = Arrays.asList("http://example.org/ROs/ro1/.ro/ann-1",
-        "http://example.org/ROs/ro1/.ro/ann-2");
+    public static final List<String> EXPECTED_ANNOTATIONS = Arrays.asList("http://example.org/ROs/ro1/.ro/ann-wf-1",
+        "http://example.org/ROs/ro1/.ro/ann-wf-2", "http://example.org/ROs/ro1/.ro/ann-wf-3",
+        "http://example.org/ROs/ro1/.ro/ann-wf-4", "http://example.org/ROs/ro1/.ro/ann-wf-5",
+        "http://example.org/ROs/ro1/.ro/ann-wfdesc-6", "http://example.org/ROs/ro1/.ro/ann-roevo-7");
 
 
     /**
@@ -113,11 +111,12 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
 
 
     @Override
-    protected URI uploadAnnotation(URI researchObject, List<URI> targets, InputStream in, String contentType)
+    protected URI uploadAnnotation(URI researchObject, String name, List<URI> targets, InputStream in,
+            String contentType)
             throws IOException {
         annCnt++;
-        URI ann = researchObject.resolve(".ro/ann-" + annCnt);
-        URI body = researchObject.resolve(".ro/body-" + annCnt);
+        URI ann = researchObject.resolve(".ro/ann-" + name + "-" + annCnt);
+        URI body = researchObject.resolve(".ro/body-" + name + "-" + annCnt);
         resources.put(body, IOUtils.toString(in));
         Resource ro = manifest.createResource(researchObject.toString());
         Individual res = manifest.createIndividual(ann.toString(), Vocab.RO_AGGREGATED_ANNOTATION);

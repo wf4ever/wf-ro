@@ -191,7 +191,7 @@ public abstract class Wf2ROConverter {
                     .getResourceAsInputStream(annotation.getBody().toASCIIString());
             URI target = tools.uriForBean(annotation.getTarget());
             LOG.debug(String.format("Uploading annotation for %s taken from %s", target, annotation.getBody()));
-            uploadAnnotation(roURI, Arrays.asList(target), annBody, "application/rdf+xml");
+            uploadAnnotation(roURI, "wf", Arrays.asList(target), annBody, "application/rdf+xml");
         }
 
         return roURI.resolve(wfID);
@@ -233,7 +233,7 @@ public abstract class Wf2ROConverter {
                 }
             }
         }).start();
-        return uploadAnnotation(roURI, Arrays.asList(rodlWfURI), in, TEXT_TURTLE);
+        return uploadAnnotation(roURI, "roevo", Arrays.asList(rodlWfURI), in, TEXT_TURTLE);
     }
 
 
@@ -272,7 +272,7 @@ public abstract class Wf2ROConverter {
                 }
             }
         }).start();
-        return uploadAnnotation(roURI, Arrays.asList(rodlWfURI), in, TEXT_TURTLE);
+        return uploadAnnotation(roURI, "wfdesc", Arrays.asList(rodlWfURI), in, TEXT_TURTLE);
     }
 
 
@@ -372,6 +372,8 @@ public abstract class Wf2ROConverter {
      * 
      * @param researchObject
      *            research object URI
+     * @param name
+     *            annotation name to use in filename
      * @param targets
      *            list of URIs of resources that are annotated
      * @param contentType
@@ -383,7 +385,8 @@ public abstract class Wf2ROConverter {
      *             when there are problems with uploading the resource
      * @throws IOException
      */
-    protected abstract URI uploadAnnotation(URI researchObject, List<URI> targets, InputStream in, String contentType)
+    protected abstract URI uploadAnnotation(URI researchObject, String name, List<URI> targets, InputStream in,
+            String contentType)
             throws ROSRSException, IOException;
 
 
