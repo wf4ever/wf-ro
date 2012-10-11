@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.log4j.Logger;
 import org.purl.wf4ever.rosrs.client.common.ROSRSException;
 import org.purl.wf4ever.rosrs.client.common.Vocab;
 
@@ -29,6 +30,9 @@ import com.hp.hpl.jena.rdf.model.Resource;
  * @author piotrekhol
  */
 public class MockupWf2ROConverter extends Wf2ROConverter {
+
+    /** Logger. */
+    private static final Logger LOGGER = Logger.getLogger(MockupWf2ROConverter.class);
 
     /** map to hold resources. */
     private Map<URI, String> resources = new HashMap<>();
@@ -112,12 +116,15 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
 
     @Override
     protected URI uploadAnnotation(URI researchObject, String name, List<URI> targets, InputStream in,
-            String contentType)
-            throws IOException {
+            String contentType) {
         annCnt++;
         URI ann = researchObject.resolve(".ro/ann-" + name + "-" + annCnt);
         URI body = researchObject.resolve(".ro/body-" + name + "-" + annCnt);
-        resources.put(body, IOUtils.toString(in));
+        try {
+            resources.put(body, IOUtils.toString(in));
+        } catch (IOException e) {
+            LOGGER.error(e);
+        }
         Resource ro = manifest.createResource(researchObject.toString());
         Individual res = manifest.createIndividual(ann.toString(), Vocab.RO_AGGREGATED_ANNOTATION);
         Resource bodyInd = manifest.createResource(body.toString());

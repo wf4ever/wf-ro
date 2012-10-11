@@ -29,6 +29,7 @@ public class Wf2RoConverterTest {
     private static final String HELLO_ANYONE_T2FLOW = "helloanyone.t2flow";
 
     /** Workflow name, in src/test/resources. */
+    @SuppressWarnings("unused")
     private static final String WF2470_T2FLOW = "workflow2470.t2flow";
 
 
@@ -50,6 +51,7 @@ public class Wf2RoConverterTest {
         MockupWf2ROConverter converter = new MockupWf2ROConverter(wfbundle);
         converter.convert();
         System.out.println(converter.getResources().keySet());
+        Assert.assertEquals(MockupWf2ROConverter.EXPECTED_ANNOTATIONS.size() + 1, converter.getResourcesAdded().size());
 
         OntModel model = converter.createManifestModel(null);
         Individual ro = model.getIndividual(converter.createResearchObject(null).toString());

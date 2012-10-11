@@ -13,11 +13,12 @@ import java.util.UUID;
 
 import javax.servlet.http.HttpServletResponse;
 
+import junit.framework.Assert;
+
 import org.junit.After;
 import org.junit.Test;
 import org.purl.wf4ever.rosrs.client.common.ROSRSException;
 import org.purl.wf4ever.rosrs.client.common.ROSRService;
-import org.purl.wf4ever.wf2ro.MockupWf2ROConverter;
 import org.purl.wf4ever.wf2ro.rest.Job.State;
 import org.scribe.model.Token;
 
@@ -46,8 +47,8 @@ public class RestApiTest extends JerseyTest {
     /** an example workflow from myExperiment. */
     private static final URI WF_URI = URI.create("http://www.myexperiment.org/workflows/2648/download?version=1");
 
-    /** workflow format URI. */
-    private static final URI TAVERNA_FORMAT = URI.create(T2FlowReader.APPLICATION_VND_TAVERNA_T2FLOW_XML);
+    /** workflow format MIME type. */
+    private static final String TAVERNA_FORMAT = T2FlowReader.APPLICATION_VND_TAVERNA_T2FLOW_XML;
 
     /** RO URI, with a random UUID as ro id. */
     private static final URI RO_URI = URI.create("http://sandbox.wf4ever-project.org/rodl/ROs/"
@@ -63,7 +64,7 @@ public class RestApiTest extends JerseyTest {
     /**
      * Maximum time that the test waits for a job to finish. After that the test fails.
      */
-    private static final long MAX_JOB_TIME_S = 240;
+    private static final long MAX_JOB_TIME_S = 480;
 
 
     @After
@@ -133,6 +134,7 @@ public class RestApiTest extends JerseyTest {
             fail("The job hasn't finished on time");
         }
         assertNotNull(status.getAdded());
-        assertEquals(MockupWf2ROConverter.EXPECTED_RESOURCES.size(), status.getAdded().size());
+        // this workflow has 3 inner annotations, plus roevo & wfdesc, plus the workflow itself = 6
+        Assert.assertEquals(6, status.getAdded().size());
     }
 }

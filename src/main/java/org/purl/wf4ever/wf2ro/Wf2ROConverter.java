@@ -106,6 +106,12 @@ public abstract class Wf2ROConverter {
             LOG.error("Can't upload workflow bundle", e);
             return;
         }
+        try {
+            extractAnnotations(roURI, wfbundle, resourcesAdded);
+        } catch (IOException | ROSRSException e) {
+            LOG.error("Can't extract annotations from workflow", e);
+        }
+
         URI wfdescURI = null;
         try {
             wfdescURI = addWfDescAnnotation(roURI, wfbundle, wfURI);
@@ -157,7 +163,9 @@ public abstract class Wf2ROConverter {
      * @throws IOException
      *             when there was a problem with getting/uploading the RO resources
      * @throws ROSRSException
+     *             ROSR service error
      * @throws WriterException
+     *             workflow bundle error
      */
     protected URI addWorkflowBundle(URI roURI, final WorkflowBundle wfbundle, String wfID)
             throws IOException, ROSRSException, WriterException {
@@ -183,6 +191,27 @@ public abstract class Wf2ROConverter {
         }).start();
         uploadAggregatedResource(roURI, wfID, in, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
 
+        return roURI.resolve(wfID);
+    }
+
+
+    /**
+     * Extract annotations from workflow bundle and upload them as RO annotations. Annotation bodies are copied as RO
+     * annotation bodies, annotation targets are referenced.
+     * 
+     * @param roURI
+     *            RO URI
+     * @param wfbundle
+     *            workflow bundle
+     * @param resourcesAdded2
+     *            list of resources to which the annotations URIs will be added
+     * @throws IOException
+     *             cannot read the annotation body
+     * @throws ROSRSException
+     *             ROSR service error
+     */
+    private void extractAnnotations(URI roURI, final WorkflowBundle wfbundle, List<URI> resourcesAdded2)
+            throws IOException, ROSRSException {
         //search for annotations
         URITools tools = new URITools();
         NamedSet<Annotation> annotations = wfbundle.getAnnotations();
@@ -191,10 +220,8 @@ public abstract class Wf2ROConverter {
                     .getResourceAsInputStream(annotation.getBody().toASCIIString());
             URI target = tools.uriForBean(annotation.getTarget());
             LOG.debug(String.format("Uploading annotation for %s taken from %s", target, annotation.getBody()));
-            uploadAnnotation(roURI, "wf", Arrays.asList(target), annBody, "application/rdf+xml");
+            resourcesAdded2.add(uploadAnnotation(roURI, "wf", Arrays.asList(target), annBody, "application/rdf+xml"));
         }
-
-        return roURI.resolve(wfID);
     }
 
 
@@ -211,6 +238,7 @@ public abstract class Wf2ROConverter {
      * @throws IOException
      *             when there was a problem with getting/uploading the RO resources
      * @throws ROSRSException
+     *             ROSR service error
      */
     protected URI addRoEvoAnnotation(URI roURI, final WorkflowBundle wfbundle, URI rodlWfURI)
             throws IOException, ROSRSException {
@@ -328,6 +356,7 @@ public abstract class Wf2ROConverter {
      * 
      * @return the research object URI
      * @throws ROSRSException
+     *             ROSR service error
      */
     protected abstract URI createResearchObject(UUID wfUUID)
             throws ROSRSException;
@@ -347,6 +376,7 @@ public abstract class Wf2ROConverter {
      * @throws IOException
      *             when there are problems with uploading the resource
      * @throws ROSRSException
+     *             ROSR service error
      */
     protected abstract void uploadAggregatedResource(URI researchObject, String path, InputStream in, String contentType)
             throws IOException, ROSRSException;
@@ -387,7 +417,7 @@ public abstract class Wf2ROConverter {
      */
     protected abstract URI uploadAnnotation(URI researchObject, String name, List<URI> targets, InputStream in,
             String contentType)
-            throws ROSRSException, IOException;
+            throws ROSRSException;
 
 
     /**
