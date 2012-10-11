@@ -68,7 +68,7 @@ public class RestApi implements JobsContainer {
      * 
      * @param resourceURI
      *            workflow URI
-     * @param formatURI
+     * @param format
      *            workflow format URI
      * @param roURI
      *            RO URI
@@ -79,8 +79,9 @@ public class RestApi implements JobsContainer {
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     public Response createJobMultipartForm(@FormDataParam("resource") URI resourceURI,
-            @FormDataParam("format") URI formatURI, @FormDataParam("ro") URI roURI, @FormDataParam("token") String token) {
-        return createJob(resourceURI, formatURI, roURI, token);
+            @FormDataParam("format") String format, @FormDataParam("ro") URI roURI,
+            @FormDataParam("token") String token) {
+        return createJob(resourceURI, format, roURI, token);
     }
 
 
@@ -99,7 +100,7 @@ public class RestApi implements JobsContainer {
      */
     @POST
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response createJobForm(@FormParam("resource") URI resourceURI, @FormParam("format") URI formatURI,
+    public Response createJobForm(@FormParam("resource") URI resourceURI, @FormParam("format") String formatURI,
             @FormParam("ro") URI roURI, @FormParam("token") String token) {
         return createJob(resourceURI, formatURI, roURI, token);
     }
@@ -125,7 +126,7 @@ public class RestApi implements JobsContainer {
      * 
      * @param resourceURI
      *            workflow URI
-     * @param formatURI
+     * @param format
      *            workflow format URI
      * @param roURI
      *            RO URI
@@ -133,13 +134,13 @@ public class RestApi implements JobsContainer {
      *            RODL access token
      * @return 201 Created
      */
-    private Response createJob(URI resourceURI, URI formatURI, URI roURI, String token) {
+    private Response createJob(URI resourceURI, String format, URI roURI, String token) {
         if (jobs.size() >= MAX_JOBS) {
             return Response.status(Status.SERVICE_UNAVAILABLE).build();
         }
         UUID jobUUID = UUID.randomUUID();
         URI jobURI = uriInfo.getAbsolutePathBuilder().path(jobUUID.toString()).build();
-        Job job = new Job(jobUUID, resourceURI, formatURI, roURI, token, this);
+        Job job = new Job(jobUUID, resourceURI, format, roURI, token, this);
         jobs.put(jobUUID, job);
         job.start();
         return Response.created(jobURI).build();

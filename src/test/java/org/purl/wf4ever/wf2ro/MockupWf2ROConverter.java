@@ -4,12 +4,14 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.log4j.Logger;
 import org.purl.wf4ever.rosrs.client.common.ROSRSException;
 import org.purl.wf4ever.rosrs.client.common.Vocab;
 
@@ -29,6 +31,9 @@ import com.hp.hpl.jena.rdf.model.Resource;
  */
 public class MockupWf2ROConverter extends Wf2ROConverter {
 
+    /** Logger. */
+    private static final Logger LOGGER = Logger.getLogger(MockupWf2ROConverter.class);
+
     /** map to hold resources. */
     private Map<URI, String> resources = new HashMap<>();
 
@@ -40,6 +45,19 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
 
     /** Used for ann bodies. */
     private int annCnt = 0;
+
+    /** Resources expected to be generated. */
+    public static final List<String> EXPECTED_RESOURCES = Arrays.asList("http://example.org/ROs/ro1/Hello_Anyone",
+        "http://example.org/ROs/ro1/.ro/body-wf-1", "http://example.org/ROs/ro1/.ro/body-wf-2",
+        "http://example.org/ROs/ro1/.ro/body-wf-3", "http://example.org/ROs/ro1/.ro/body-wf-4",
+        "http://example.org/ROs/ro1/.ro/body-wf-5", "http://example.org/ROs/ro1/.ro/body-wfdesc-6",
+        "http://example.org/ROs/ro1/.ro/body-roevo-7");
+
+    /** Annotations expected to be generated. */
+    public static final List<String> EXPECTED_ANNOTATIONS = Arrays.asList("http://example.org/ROs/ro1/.ro/ann-wf-1",
+        "http://example.org/ROs/ro1/.ro/ann-wf-2", "http://example.org/ROs/ro1/.ro/ann-wf-3",
+        "http://example.org/ROs/ro1/.ro/ann-wf-4", "http://example.org/ROs/ro1/.ro/ann-wf-5",
+        "http://example.org/ROs/ro1/.ro/ann-wfdesc-6", "http://example.org/ROs/ro1/.ro/ann-roevo-7");
 
 
     /**
@@ -70,7 +88,7 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
 
 
     @Override
-    protected URI addWorkflowBundle(URI roURI, WorkflowBundle wfbundle, UUID wfUUID)
+    protected URI addWorkflowBundle(URI roURI, WorkflowBundle wfbundle, String wfUUID)
             throws IOException, ROSRSException, WriterException {
         URI wfURI = super.addWorkflowBundle(roURI, wfbundle, wfUUID);
         Resource ro = manifest.createResource(roURI.toString());
@@ -97,12 +115,16 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
 
 
     @Override
-    protected URI uploadAnnotation(URI researchObject, List<URI> targets, InputStream in, String contentType)
-            throws IOException {
+    protected URI uploadAnnotation(URI researchObject, String name, List<URI> targets, InputStream in,
+            String contentType) {
         annCnt++;
-        URI ann = researchObject.resolve(".ro/ann-" + annCnt);
-        URI body = researchObject.resolve(".ro/body-" + annCnt);
-        resources.put(body, IOUtils.toString(in));
+        URI ann = researchObject.resolve(".ro/ann-" + name + "-" + annCnt);
+        URI body = researchObject.resolve(".ro/body-" + name + "-" + annCnt);
+        try {
+            resources.put(body, IOUtils.toString(in));
+        } catch (IOException e) {
+            LOGGER.error(e);
+        }
         Resource ro = manifest.createResource(researchObject.toString());
         Individual res = manifest.createIndividual(ann.toString(), Vocab.RO_AGGREGATED_ANNOTATION);
         Resource bodyInd = manifest.createResource(body.toString());

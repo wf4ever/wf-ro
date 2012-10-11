@@ -81,10 +81,12 @@ public class RodlConverter extends Wf2ROConverter {
 
 
     @Override
-    protected URI uploadAnnotation(URI researchObject, List<URI> targets, InputStream in, String contentType)
+    protected URI uploadAnnotation(URI researchObject, String name, List<URI> targets, InputStream in,
+            String contentType)
             throws ROSRSException {
         String bodyPath = ROSRService.createAnnotationBodyPath(targets.get(0).resolve(".").relativize(targets.get(0))
-                .toString());
+                .toString()
+                + "-" + name);
         ClientResponse response = ROSRService.addAnnotation(researchObject, targets, bodyPath, in, contentType,
             rodlToken);
         return response.getLocation();

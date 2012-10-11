@@ -3,7 +3,6 @@
  */
 package org.purl.wf4ever.wf2ro;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PipedInputStream;
@@ -12,16 +11,16 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.UUID;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
 import org.apache.log4j.Logger;
 import org.purl.wf4ever.rosrs.client.common.ROSRSException;
 import org.purl.wf4ever.wfdesc.scufl2.ROEvoSerializer;
 
+import uk.org.taverna.scufl2.api.annotation.Annotation;
+import uk.org.taverna.scufl2.api.common.NamedSet;
+import uk.org.taverna.scufl2.api.common.URITools;
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
 import uk.org.taverna.scufl2.api.io.WorkflowBundleIO;
 import uk.org.taverna.scufl2.api.io.WriterException;
@@ -91,6 +90,7 @@ public abstract class Wf2ROConverter {
             running = true;
         }
         UUID wfUUID = getWorkflowBundleUUID(wfbundle);
+        String wfname = wfbundle.getMainWorkflow().getName();
         URI roURI = null;
         try {
             roURI = createResearchObject(wfUUID);
@@ -100,12 +100,18 @@ public abstract class Wf2ROConverter {
         }
         URI wfURI;
         try {
-            wfURI = addWorkflowBundle(roURI, wfbundle, wfUUID);
+            wfURI = addWorkflowBundle(roURI, wfbundle, wfname);
             resourcesAdded.add(wfURI);
         } catch (IOException | ROSRSException | WriterException e) {
             LOG.error("Can't upload workflow bundle", e);
             return;
         }
+        try {
+            extractAnnotations(roURI, wfbundle, resourcesAdded);
+        } catch (IOException | ROSRSException e) {
+            LOG.error("Can't extract annotations from workflow", e);
+        }
+
         URI wfdescURI = null;
         try {
             wfdescURI = addWfDescAnnotation(roURI, wfbundle, wfURI);
@@ -118,15 +124,16 @@ public abstract class Wf2ROConverter {
         } catch (IOException | ROSRSException e) {
             LOG.error("Can't upload RO evolution desc", e);
         }
-        try {
-            if (wfdescURI != null) {
-                aggregateWorkflowDependencies(roURI, wfdescURI);
-            } else {
-                LOG.error("Can't read the workflow desc");
-            }
-        } catch (ROSRSException e) {
-            LOG.error("Can't aggregate resources", e);
-        }
+        //FIXME this causes Jena problems
+        //        try {
+        //            if (wfdescURI != null) {
+        //                aggregateWorkflowDependencies(roURI, wfdescURI);
+        //            } else {
+        //                LOG.error("Can't read the workflow desc");
+        //            }
+        //        } catch (ROSRSException e) {
+        //            LOG.error("Can't aggregate resources", e);
+        //        }
     }
 
 
@@ -150,51 +157,71 @@ public abstract class Wf2ROConverter {
      *            research object URI
      * @param wfbundle
      *            the workflow bundle
-     * @param wfUUID
-     *            workflow bundle UUID
+     * @param wfID
+     *            workflow bundle id
      * @return the workflow bundle URI as in the manifest or null if uploading failed
      * @throws IOException
      *             when there was a problem with getting/uploading the RO resources
      * @throws ROSRSException
+     *             ROSR service error
      * @throws WriterException
+     *             workflow bundle error
      */
-    protected URI addWorkflowBundle(URI roURI, final WorkflowBundle wfbundle, UUID wfUUID)
+    protected URI addWorkflowBundle(URI roURI, final WorkflowBundle wfbundle, String wfID)
             throws IOException, ROSRSException, WriterException {
-        final File temp = File.createTempFile("wf-ro", ".wfbundle");
-        // Delete temp file when program exits.
-        temp.deleteOnExit();
+        //save the scufl2
+        final PipedInputStream in = new PipedInputStream();
+        final PipedOutputStream out = new PipedOutputStream(in);
+        new Thread(new Runnable() {
 
-        Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-        bundleIO.writeBundle(wfbundle, temp, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
-
-        ZipFile zip = new ZipFile(temp);
-        Enumeration<? extends ZipEntry> entries = zip.entries();
-        while (entries.hasMoreElements()) {
-            ZipEntry entry = entries.nextElement();
-            LOG.debug("Entry: " + entry.toString());
-            if (entry.isDirectory()) {
-                LOG.debug("Entry is a directory, skipping");
-                continue;
+            public void run() {
+                Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+                try {
+                    bundleIO.writeBundle(wfbundle, out, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
+                } catch (WriterException | IOException e) {
+                    LOG.error("Can't download workflow bundle", e);
+                } finally {
+                    try {
+                        out.close();
+                    } catch (IOException e) {
+                        LOG.warn("Exception when closing the workflow bundle output stream", e);
+                    }
+                }
             }
-            String entryName = entry.getName();
-            String entryMimeType = null;
-            if (wfbundle.getResources().listAllResources().containsKey(entryName)) {
-                entryMimeType = wfbundle.getResources().getResourceEntry(entryName).getMediaType();
-            } else {
-                entryMimeType = "application/xml";
-            }
-            LOG.debug("Mime type is: " + entryMimeType);
-            //TODO workflow UUID is volatile, we might change it in the future
-            String roEntryPath = wfUUID.toString() + "/" + entryName;
+        }).start();
+        uploadAggregatedResource(roURI, wfID, in, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
 
-            uploadAggregatedResource(roURI, roEntryPath, zip.getInputStream(entry), entryMimeType);
-            //TODO make it depend on the URI returned by RODL
-            resourcesAdded.add(roURI.resolve(roEntryPath));
+        return roURI.resolve(wfID);
+    }
+
+
+    /**
+     * Extract annotations from workflow bundle and upload them as RO annotations. Annotation bodies are copied as RO
+     * annotation bodies, annotation targets are referenced.
+     * 
+     * @param roURI
+     *            RO URI
+     * @param wfbundle
+     *            workflow bundle
+     * @param resourcesAdded2
+     *            list of resources to which the annotations URIs will be added
+     * @throws IOException
+     *             cannot read the annotation body
+     * @throws ROSRSException
+     *             ROSR service error
+     */
+    private void extractAnnotations(URI roURI, final WorkflowBundle wfbundle, List<URI> resourcesAdded2)
+            throws IOException, ROSRSException {
+        //search for annotations
+        URITools tools = new URITools();
+        NamedSet<Annotation> annotations = wfbundle.getAnnotations();
+        for (Annotation annotation : annotations) {
+            InputStream annBody = wfbundle.getResources()
+                    .getResourceAsInputStream(annotation.getBody().toASCIIString());
+            URI target = tools.uriForBean(annotation.getTarget());
+            LOG.debug(String.format("Uploading annotation for %s taken from %s", target, annotation.getBody()));
+            resourcesAdded2.add(uploadAnnotation(roURI, "wf", Arrays.asList(target), annBody, "application/rdf+xml"));
         }
-        zip.close();
-        temp.delete();
-
-        return roURI.resolve(wfUUID.toString());
     }
 
 
@@ -211,6 +238,7 @@ public abstract class Wf2ROConverter {
      * @throws IOException
      *             when there was a problem with getting/uploading the RO resources
      * @throws ROSRSException
+     *             ROSR service error
      */
     protected URI addRoEvoAnnotation(URI roURI, final WorkflowBundle wfbundle, URI rodlWfURI)
             throws IOException, ROSRSException {
@@ -233,7 +261,7 @@ public abstract class Wf2ROConverter {
                 }
             }
         }).start();
-        return uploadAnnotation(roURI, Arrays.asList(rodlWfURI), in, TEXT_TURTLE);
+        return uploadAnnotation(roURI, "roevo", Arrays.asList(rodlWfURI), in, TEXT_TURTLE);
     }
 
 
@@ -272,7 +300,7 @@ public abstract class Wf2ROConverter {
                 }
             }
         }).start();
-        return uploadAnnotation(roURI, Arrays.asList(rodlWfURI), in, TEXT_TURTLE);
+        return uploadAnnotation(roURI, "wfdesc", Arrays.asList(rodlWfURI), in, TEXT_TURTLE);
     }
 
 
@@ -328,6 +356,7 @@ public abstract class Wf2ROConverter {
      * 
      * @return the research object URI
      * @throws ROSRSException
+     *             ROSR service error
      */
     protected abstract URI createResearchObject(UUID wfUUID)
             throws ROSRSException;
@@ -347,6 +376,7 @@ public abstract class Wf2ROConverter {
      * @throws IOException
      *             when there are problems with uploading the resource
      * @throws ROSRSException
+     *             ROSR service error
      */
     protected abstract void uploadAggregatedResource(URI researchObject, String path, InputStream in, String contentType)
             throws IOException, ROSRSException;
@@ -372,6 +402,8 @@ public abstract class Wf2ROConverter {
      * 
      * @param researchObject
      *            research object URI
+     * @param name
+     *            annotation name to use in filename
      * @param targets
      *            list of URIs of resources that are annotated
      * @param contentType
@@ -383,8 +415,9 @@ public abstract class Wf2ROConverter {
      *             when there are problems with uploading the resource
      * @throws IOException
      */
-    protected abstract URI uploadAnnotation(URI researchObject, List<URI> targets, InputStream in, String contentType)
-            throws ROSRSException, IOException;
+    protected abstract URI uploadAnnotation(URI researchObject, String name, List<URI> targets, InputStream in,
+            String contentType)
+            throws ROSRSException;
 
 
     /**

@@ -2,7 +2,6 @@ package org.purl.wf4ever.wf2ro;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
 import java.util.List;
 
 import junit.framework.Assert;
@@ -30,6 +29,7 @@ public class Wf2RoConverterTest {
     private static final String HELLO_ANYONE_T2FLOW = "helloanyone.t2flow";
 
     /** Workflow name, in src/test/resources. */
+    @SuppressWarnings("unused")
     private static final String WF2470_T2FLOW = "workflow2470.t2flow";
 
 
@@ -51,32 +51,28 @@ public class Wf2RoConverterTest {
         MockupWf2ROConverter converter = new MockupWf2ROConverter(wfbundle);
         converter.convert();
         System.out.println(converter.getResources().keySet());
+        Assert.assertEquals(MockupWf2ROConverter.EXPECTED_ANNOTATIONS.size() + 1, converter.getResourcesAdded().size());
 
         OntModel model = converter.createManifestModel(null);
         Individual ro = model.getIndividual(converter.createResearchObject(null).toString());
         Assert.assertNotNull("RO exists in the manifest", ro);
         // should aggregate the workflow, 2 annotations about it and 2 annotation bodies
-        List<String> resources = Arrays
-                .asList(
-                    "http://example.org/ROs/ro1/01348671-5aaa-4cc2-84cc-477329b70b0d",
-                    "http://example.org/ROs/ro1/01348671-5aaa-4cc2-84cc-477329b70b0d/profile/taverna-2.2.0.rdf",
-                    "http://example.org/ROs/ro1/01348671-5aaa-4cc2-84cc-477329b70b0d/META-INF/container.xml",
-                    "http://example.org/ROs/ro1/01348671-5aaa-4cc2-84cc-477329b70b0d/history/01348671-5aaa-4cc2-84cc-477329b70b0d.t2flow",
-                    "http://example.org/ROs/ro1/01348671-5aaa-4cc2-84cc-477329b70b0d/workflow/Hello_Anyone.rdf",
-                    "http://example.org/ROs/ro1/01348671-5aaa-4cc2-84cc-477329b70b0d/mimetype",
-                    "http://example.org/ROs/ro1/01348671-5aaa-4cc2-84cc-477329b70b0d/workflowBundle.rdf",
-                    "http://example.org/ROs/ro1/01348671-5aaa-4cc2-84cc-477329b70b0d/META-INF/manifest.xml",
-                    "http://example.org/ROs/ro1/.ro/body-1", "http://example.org/ROs/ro1/.ro/body-2",
-                    "http://example.org/ROs/ro1/.ro/ann-1", "http://example.org/ROs/ro1/.ro/ann-2");
         List<RDFNode> aggregatedResources = ro.listPropertyValues(Vocab.ORE_AGGREGATES).toList();
         System.out.println(aggregatedResources);
-        Assert.assertEquals("Correct number of aggregated resources", resources.size(), aggregatedResources.size());
+        Assert.assertEquals("Correct number of aggregated resources", MockupWf2ROConverter.EXPECTED_RESOURCES.size()
+                + MockupWf2ROConverter.EXPECTED_ANNOTATIONS.size(), aggregatedResources.size());
         for (RDFNode node : aggregatedResources) {
             Assert.assertTrue(node.isURIResource());
             Individual ind = node.as(Individual.class);
             Assert.assertTrue("Wf or annotation",
                 ind.hasRDFType(Vocab.RO_RESOURCE) || ind.hasRDFType(Vocab.RO_AGGREGATED_ANNOTATION));
-            Assert.assertTrue("Path " + ind.getURI() + " is expected", resources.contains(ind.getURI()));
+            if (ind.hasRDFType(Vocab.RO_RESOURCE)) {
+                Assert.assertTrue("Path " + ind.getURI() + " is expected",
+                    MockupWf2ROConverter.EXPECTED_RESOURCES.contains(ind.getURI()));
+            } else {
+                Assert.assertTrue("Path " + ind.getURI() + " is expected",
+                    MockupWf2ROConverter.EXPECTED_ANNOTATIONS.contains(ind.getURI()));
+            }
         }
     }
 }

@@ -19,8 +19,8 @@ public class JobStatus {
     /** workflow URI. */
     private URI resource;
 
-    /** workflow format URI. */
-    private URI format;
+    /** workflow format MIME type. */
+    private String format;
 
     /** RO URI. */
     private URI ro;
@@ -54,7 +54,7 @@ public class JobStatus {
      * @param added
      *            resources added
      */
-    public JobStatus(URI resource, URI format, URI ro, State state, List<URI> added) {
+    public JobStatus(URI resource, String format, URI ro, State state, List<URI> added) {
         super();
         this.resource = resource;
         this.format = format;
@@ -74,12 +74,12 @@ public class JobStatus {
     }
 
 
-    public URI getFormat() {
+    public String getFormat() {
         return format;
     }
 
 
-    public void setFormat(URI format) {
+    public void setFormat(String format) {
         this.format = format;
     }
 
