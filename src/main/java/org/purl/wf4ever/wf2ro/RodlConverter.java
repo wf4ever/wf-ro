@@ -3,17 +3,22 @@
  */
 package org.purl.wf4ever.wf2ro;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
 import org.purl.wf4ever.rosrs.client.common.ROSRSException;
 import org.purl.wf4ever.rosrs.client.common.ROSRService;
+import org.purl.wf4ever.rosrs.client.common.Utils;
 
+import pl.psnc.dl.wf4ever.vocabulary.ORE;
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
 
+import com.google.common.collect.Multimap;
 import com.hp.hpl.jena.ontology.OntModel;
 import com.sun.jersey.api.client.ClientResponse;
 
@@ -101,6 +106,31 @@ public class RodlConverter extends Wf2ROConverter {
     @Override
     public void readModelFromUri(OntModel model, URI wfdescURI) {
         model.read(wfdescURI.toString());
+    }
+
+
+    @Override
+    protected URI createFolder(URI roURI, String path)
+            throws ROSRSException {
+        ClientResponse response = rosrs.createFolder(roURI, path);
+        Multimap<String, URI> links = Utils.getLinkHeaders(response.getHeaders().get("Link"));
+        Iterator<URI> it = links.get(ORE.proxyFor.getURI()).iterator();
+        response.close();
+        if (!it.hasNext()) {
+            throw new ROSRSException("Missing proxyFor header", response.getStatus(), response
+                    .getClientResponseStatus().getReasonPhrase());
+        }
+        return it.next();
+    }
+
+
+    @Override
+    protected URI addFolderEntry(URI folder, URI proxyFor, String name)
+            throws IOException, ROSRSException {
+        ClientResponse response = rosrs.addFolderEntry(folder, proxyFor, name);
+        URI entry = response.getLocation();
+        response.close();
+        return entry;
     }
 
 }

@@ -2,11 +2,13 @@ package org.purl.wf4ever.wf2ro;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.util.List;
 
 import junit.framework.Assert;
 
 import org.junit.Test;
+import org.purl.wf4ever.wf2ro.MockupWf2ROConverter.Entry;
 
 import pl.psnc.dl.wf4ever.vocabulary.ORE;
 import pl.psnc.dl.wf4ever.vocabulary.RO;
@@ -14,6 +16,7 @@ import uk.org.taverna.scufl2.api.container.WorkflowBundle;
 import uk.org.taverna.scufl2.api.io.ReaderException;
 import uk.org.taverna.scufl2.api.io.WorkflowBundleIO;
 
+import com.google.common.collect.Multimap;
 import com.hp.hpl.jena.ontology.Individual;
 import com.hp.hpl.jena.ontology.OntModel;
 import com.hp.hpl.jena.rdf.model.RDFNode;
@@ -74,6 +77,16 @@ public class Wf2RoConverterTest {
                 Assert.assertTrue("Path " + ind.getURI() + " is expected",
                     MockupWf2ROConverter.EXPECTED_ANNOTATIONS.contains(ind.getURI()));
             }
+        }
+        List<URI> folders = converter.getFolders();
+        Assert.assertEquals(MockupWf2ROConverter.EXPECTED_FOLDERS.size(), folders.size());
+        for (URI uri : MockupWf2ROConverter.EXPECTED_FOLDERS) {
+            Assert.assertTrue(folders.contains(uri));
+        }
+        Multimap<URI, Entry> entries = converter.getEntries();
+        Assert.assertEquals(MockupWf2ROConverter.EXPECTED_ENTRIES.size(), entries.size());
+        for (java.util.Map.Entry<URI, MockupWf2ROConverter.Entry> e : MockupWf2ROConverter.EXPECTED_ENTRIES.entries()) {
+            Assert.assertTrue(entries.containsEntry(e.getKey(), e.getValue()));
         }
     }
 }

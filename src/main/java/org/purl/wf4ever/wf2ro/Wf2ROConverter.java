@@ -11,9 +11,14 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.UUID;
 
+import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.log4j.Logger;
 import org.purl.wf4ever.rosrs.client.common.ROSRSException;
 import org.purl.wf4ever.wfdesc.scufl2.ROEvoSerializer;
@@ -124,6 +129,11 @@ public abstract class Wf2ROConverter {
         } catch (IOException | ROSRSException e) {
             LOG.error("Can't upload RO evolution desc", e);
         }
+        try {
+            createFolders(roURI, resourcesAdded);
+        } catch (IOException | ROSRSException | ConfigurationException e) {
+            LOG.error("Can't create folders", e);
+        }
         //FIXME this causes Jena problems
         //        try {
         //            if (wfdescURI != null) {
@@ -135,6 +145,87 @@ public abstract class Wf2ROConverter {
         //            LOG.error("Can't aggregate resources", e);
         //        }
     }
+
+
+    /**
+     * Read a folder structure from the properties file and create it in the RO.
+     * 
+     * @param roURI
+     *            RO URI
+     * @param resourcesAdded2
+     *            list to which add created folders
+     * @throws ConfigurationException
+     *             could not read the properties file
+     * @throws IOException
+     *             ?
+     * @throws ROSRSException
+     *             error communicating with ROSRS
+     */
+    private void createFolders(URI roURI, List<URI> resourcesAdded2)
+            throws ConfigurationException, IOException, ROSRSException {
+        PropertiesConfiguration props = new PropertiesConfiguration("folders.properties");
+        List<Object> folders = props.getList("folder");
+        if (folders == null) {
+            return;
+        }
+        Map<String, URI> folderURIs = new HashMap<>();
+        for (Object o : folders) {
+            String path = o.toString();
+            URI folder = createFolder(roURI, path);
+            resourcesAdded2.add(folder);
+            folderURIs.put(path, folder);
+        }
+        for (Entry<String, URI> e : folderURIs.entrySet()) {
+            String folderPath = e.getKey();
+            URI folderURI = e.getValue();
+            List<Object> entries = props.getList("entries." + folderPath);
+            if (entries == null) {
+                continue;
+            }
+            for (Object o : entries) {
+                String proxyForPath = o.toString();
+                URI proxyFor = roURI.resolve(proxyForPath);
+                String name = props.getString("name." + proxyForPath);
+                addFolderEntry(folderURI, proxyFor, name);
+            }
+        }
+    }
+
+
+    /**
+     * Create a folder in the RO.
+     * 
+     * @param roURI
+     *            RO URI
+     * @param path
+     *            folder path
+     * @return folder URI
+     * @throws IOException
+     *             ?
+     * @throws ROSRSException
+     *             incorrect response from ROSRS
+     */
+    protected abstract URI createFolder(URI roURI, String path)
+            throws IOException, ROSRSException;
+
+
+    /**
+     * Add a resource to the folder.
+     * 
+     * @param folder
+     *            folder
+     * @param proxyFor
+     *            resource
+     * @param name
+     *            name of the resource in the folder, optional
+     * @return folder entry URI
+     * @throws IOException
+     *             ?
+     * @throws ROSRSException
+     *             incorrect response from ROSRS
+     */
+    protected abstract URI addFolderEntry(URI folder, URI proxyFor, String name)
+            throws IOException, ROSRSException;
 
 
     /**
@@ -314,6 +405,7 @@ public abstract class Wf2ROConverter {
      * @throws ROSRSException
      *             when there was a problem with uploading the RO resources
      */
+    @SuppressWarnings("unused")
     private void aggregateWorkflowDependencies(URI researchObject, URI wfdescURI)
             throws ROSRSException {
         OntModel model = ModelFactory.createOntologyModel(OntModelSpec.OWL_LITE_MEM);
