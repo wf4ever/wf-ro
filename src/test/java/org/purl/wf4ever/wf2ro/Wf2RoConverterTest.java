@@ -3,12 +3,14 @@ package org.purl.wf4ever.wf2ro;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import junit.framework.Assert;
 
 import org.junit.Test;
-import org.purl.wf4ever.wf2ro.MockupWf2ROConverter.Entry;
+import org.purl.wf4ever.wf2ro.MockupWf2ROConverter.FolderEntry;
 
 import pl.psnc.dl.wf4ever.vocabulary.ORE;
 import pl.psnc.dl.wf4ever.vocabulary.RO;
@@ -55,7 +57,8 @@ public class Wf2RoConverterTest {
         MockupWf2ROConverter converter = new MockupWf2ROConverter(wfbundle);
         converter.convert();
         System.out.println(converter.getResources().keySet());
-        Assert.assertEquals(MockupWf2ROConverter.EXPECTED_ANNOTATIONS.size() + 1, converter.getResourcesAdded().size());
+        Assert.assertEquals(MockupWf2ROConverter.EXPECTED_ANNOTATIONS.size() + 1
+                + MockupWf2ROConverter.EXPECTED_FOLDERS.size(), converter.getResourcesAdded().size());
 
         OntModel model = converter.createManifestModel(null);
         Individual ro = model.getIndividual(converter.createResearchObject(null).toString());
@@ -83,10 +86,13 @@ public class Wf2RoConverterTest {
         for (URI uri : MockupWf2ROConverter.EXPECTED_FOLDERS) {
             Assert.assertTrue(folders.contains(uri));
         }
-        Multimap<URI, Entry> entries = converter.getEntries();
+        Multimap<URI, FolderEntry> entries = converter.getEntries();
         Assert.assertEquals(MockupWf2ROConverter.EXPECTED_ENTRIES.size(), entries.size());
-        for (java.util.Map.Entry<URI, MockupWf2ROConverter.Entry> e : MockupWf2ROConverter.EXPECTED_ENTRIES.entries()) {
-            Assert.assertTrue(entries.containsEntry(e.getKey(), e.getValue()));
+        for (Map.Entry<URI, MockupWf2ROConverter.FolderEntry> e : MockupWf2ROConverter.EXPECTED_ENTRIES.entries()) {
+            FolderEntry expected = e.getValue();
+            Collection<FolderEntry> found = entries.get(e.getKey());
+            Assert.assertNotNull(found);
+            Assert.assertTrue(found.contains(expected));
         }
     }
 }

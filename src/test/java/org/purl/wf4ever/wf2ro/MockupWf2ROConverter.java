@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -12,6 +13,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.log4j.Logger;
 import org.purl.wf4ever.rosrs.client.common.ROSRSException;
 
@@ -68,7 +70,7 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
     private List<URI> folders = new ArrayList<>();
 
     /** folder entries. */
-    private Multimap<URI, Entry> entries = HashMultimap.<URI, Entry> create();
+    private Multimap<URI, FolderEntry> entries = HashMultimap.<URI, FolderEntry> create();
 
     /** Folders expected to be read. */
     public static final List<URI> EXPECTED_FOLDERS = Arrays.asList(URI.create("http://example.org/ROs/ro1/folder1/"),
@@ -76,7 +78,7 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
         URI.create("http://example.org/ROs/ro1/folder%202/"), URI.create("http://example.org/ROs/ro1/folder3/"));
 
     /** Entries expected to be read. */
-    public static final Multimap<URI, Entry> EXPECTED_ENTRIES = HashMultimap.<URI, Entry> create();
+    public static final Multimap<URI, FolderEntry> EXPECTED_ENTRIES = HashMultimap.<URI, FolderEntry> create();
 
 
     /**
@@ -85,7 +87,7 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
      * @author piotrekhol
      * 
      */
-    class Entry {
+    class FolderEntry {
 
         /** ore:proxyFor. */
         private URI proxyFor;
@@ -102,7 +104,7 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
          * @param name
          *            ro:entryName
          */
-        public Entry(URI proxyFor, String name) {
+        public FolderEntry(URI proxyFor, String name) {
             this.proxyFor = proxyFor;
             this.name = name;
         }
@@ -120,16 +122,23 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
 
         @Override
         public boolean equals(Object obj) {
-            if (obj instanceof Entry) {
+            if (!(obj instanceof FolderEntry)) {
                 return false;
             }
-            return ((Entry) obj).proxyFor.equals(proxyFor) && ((Entry) obj).name.equals(name);
+            FolderEntry other = (FolderEntry) obj;
+            return other.proxyFor.equals(proxyFor) && ((other.name == null && name == null) || other.name.equals(name));
         }
 
 
         @Override
         public int hashCode() {
-            return super.hashCode();
+            return new HashCodeBuilder(17, 31).append(name).append(proxyFor).toHashCode();
+        }
+
+
+        @Override
+        public String toString() {
+            return String.format("[Proxy for: %s, name: %s]", proxyFor, name);
         }
     }
 
@@ -147,11 +156,11 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
         m.addProperty(ORE.describes, ro);
 
         EXPECTED_ENTRIES.put(URI.create("http://example.org/ROs/ro1/folder1/"),
-            new Entry(URI.create("http://example.org/ROs/ro1/folder1/folder1a/"), null));
+            new FolderEntry(URI.create("http://example.org/ROs/ro1/folder1/folder1a/"), null));
         EXPECTED_ENTRIES.put(URI.create("http://example.org/ROs/ro1/folder%202/"),
-            new Entry(URI.create("http://example.org/ROs/ro1/folder1/folder1a/"), null));
+            new FolderEntry(URI.create("http://example.org/ROs/ro1/folder1/folder1a/"), null));
         EXPECTED_ENTRIES.put(URI.create("http://example.org/ROs/ro1/folder%202/"),
-            new Entry(URI.create("http://google.com"), "Google/"));
+            new FolderEntry(URI.create("http://google.com"), "Google/"));
     }
 
 
@@ -237,16 +246,21 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
     @Override
     protected URI createFolder(URI roURI, String path)
             throws IOException, ROSRSException {
-        URI folder = roURI.resolve(path);
-        folders.add(folder);
-        return folder;
+        try {
+            URI folder = new URI(roURI.getScheme(), roURI.getHost(), roURI.getPath() + path, null);
+            folders.add(folder);
+            return folder;
+        } catch (URISyntaxException e) {
+            LOGGER.error("Wrong URI", e);
+            return null;
+        }
     }
 
 
     @Override
     protected URI addFolderEntry(URI folder, URI proxyFor, String name)
             throws IOException, ROSRSException {
-        entries.put(folder, new Entry(proxyFor, name));
+        entries.put(folder, new FolderEntry(proxyFor, name));
         return folder.resolve("entries/" + entries.get(folder).size());
     }
 
@@ -256,7 +270,7 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
     }
 
 
-    public Multimap<URI, Entry> getEntries() {
+    public Multimap<URI, FolderEntry> getEntries() {
         return entries;
     }
 
