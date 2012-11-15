@@ -7,8 +7,9 @@ import java.util.List;
 import junit.framework.Assert;
 
 import org.junit.Test;
-import org.purl.wf4ever.rosrs.client.common.Vocab;
 
+import pl.psnc.dl.wf4ever.vocabulary.ORE;
+import pl.psnc.dl.wf4ever.vocabulary.RO;
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
 import uk.org.taverna.scufl2.api.io.ReaderException;
 import uk.org.taverna.scufl2.api.io.WorkflowBundleIO;
@@ -57,7 +58,7 @@ public class Wf2RoConverterTest {
         Individual ro = model.getIndividual(converter.createResearchObject(null).toString());
         Assert.assertNotNull("RO exists in the manifest", ro);
         // should aggregate the workflow, 2 annotations about it and 2 annotation bodies
-        List<RDFNode> aggregatedResources = ro.listPropertyValues(Vocab.ORE_AGGREGATES).toList();
+        List<RDFNode> aggregatedResources = ro.listPropertyValues(ORE.aggregates).toList();
         System.out.println(aggregatedResources);
         Assert.assertEquals("Correct number of aggregated resources", MockupWf2ROConverter.EXPECTED_RESOURCES.size()
                 + MockupWf2ROConverter.EXPECTED_ANNOTATIONS.size(), aggregatedResources.size());
@@ -65,8 +66,8 @@ public class Wf2RoConverterTest {
             Assert.assertTrue(node.isURIResource());
             Individual ind = node.as(Individual.class);
             Assert.assertTrue("Wf or annotation",
-                ind.hasRDFType(Vocab.RO_RESOURCE) || ind.hasRDFType(Vocab.RO_AGGREGATED_ANNOTATION));
-            if (ind.hasRDFType(Vocab.RO_RESOURCE)) {
+                ind.hasRDFType(RO.Resource) || ind.hasRDFType(RO.AggregatedAnnotation));
+            if (ind.hasRDFType(RO.Resource)) {
                 Assert.assertTrue("Path " + ind.getURI() + " is expected",
                     MockupWf2ROConverter.EXPECTED_RESOURCES.contains(ind.getURI()));
             } else {

@@ -13,8 +13,10 @@ import java.util.UUID;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.purl.wf4ever.rosrs.client.common.ROSRSException;
-import org.purl.wf4ever.rosrs.client.common.Vocab;
 
+import pl.psnc.dl.wf4ever.vocabulary.AO;
+import pl.psnc.dl.wf4ever.vocabulary.ORE;
+import pl.psnc.dl.wf4ever.vocabulary.RO;
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
 import uk.org.taverna.scufl2.api.io.WriterException;
 
@@ -68,10 +70,9 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
      */
     public MockupWf2ROConverter(WorkflowBundle wfbundle) {
         super(wfbundle);
-        Individual ro = manifest.createIndividual(RO_URI.toString(), Vocab.RO_RESEARCH_OBJECT);
-        Individual m = manifest.createIndividual(RO_URI.resolve(".ro/manifest.rdf").toString(),
-            Vocab.RO_RESEARCH_OBJECT);
-        m.addProperty(Vocab.ORE_DESCRIBES, ro);
+        Individual ro = manifest.createIndividual(RO_URI.toString(), RO.ResearchObject);
+        Individual m = manifest.createIndividual(RO_URI.resolve(".ro/manifest.rdf").toString(), RO.ResearchObject);
+        m.addProperty(ORE.describes, ro);
     }
 
 
@@ -92,8 +93,8 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
             throws IOException, ROSRSException, WriterException {
         URI wfURI = super.addWorkflowBundle(roURI, wfbundle, wfUUID);
         Resource ro = manifest.createResource(roURI.toString());
-        Individual res = manifest.createIndividual(wfURI.toString(), Vocab.RO_RESOURCE);
-        ro.addProperty(Vocab.ORE_AGGREGATES, res);
+        Individual res = manifest.createIndividual(wfURI.toString(), RO.Resource);
+        ro.addProperty(ORE.aggregates, res);
         return wfURI;
     }
 
@@ -109,8 +110,8 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
         URI uri = researchObject.resolve(path);
         resources.put(uri, IOUtils.toString(in));
         Resource ro = manifest.createResource(researchObject.toString());
-        Individual res = manifest.createIndividual(uri.toString(), Vocab.RO_RESOURCE);
-        ro.addProperty(Vocab.ORE_AGGREGATES, res);
+        Individual res = manifest.createIndividual(uri.toString(), RO.Resource);
+        ro.addProperty(ORE.aggregates, res);
     }
 
 
@@ -126,12 +127,12 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
             LOGGER.error(e);
         }
         Resource ro = manifest.createResource(researchObject.toString());
-        Individual res = manifest.createIndividual(ann.toString(), Vocab.RO_AGGREGATED_ANNOTATION);
+        Individual res = manifest.createIndividual(ann.toString(), RO.AggregatedAnnotation);
         Resource bodyInd = manifest.createResource(body.toString());
-        ro.addProperty(Vocab.ORE_AGGREGATES, res);
-        res.addProperty(Vocab.AO_BODY, bodyInd);
-        Individual res2 = manifest.createIndividual(body.toString(), Vocab.RO_RESOURCE);
-        ro.addProperty(Vocab.ORE_AGGREGATES, res2);
+        ro.addProperty(ORE.aggregates, res);
+        res.addProperty(AO.body, bodyInd);
+        Individual res2 = manifest.createIndividual(body.toString(), RO.Resource);
+        ro.addProperty(ORE.aggregates, res2);
         return ann;
     }
 
@@ -140,15 +141,15 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
     protected void aggregateResource(URI researchObject, URI resource) {
         resources.put(resource, null);
         Resource ro = manifest.createResource(researchObject.toString());
-        Individual res = manifest.createIndividual(resource.toString(), Vocab.RO_RESOURCE);
-        ro.addProperty(Vocab.ORE_AGGREGATES, res);
+        Individual res = manifest.createIndividual(resource.toString(), RO.Resource);
+        ro.addProperty(ORE.aggregates, res);
     }
 
 
     @Override
     public void readModelFromUri(OntModel model, URI wfdescURI) {
         Individual res = manifest.getIndividual(wfdescURI.toString());
-        URI body = URI.create(res.getPropertyResourceValue(Vocab.AO_BODY).getURI());
+        URI body = URI.create(res.getPropertyResourceValue(AO.body).getURI());
 
         model.read(new ByteArrayInputStream(resources.get(body).getBytes()), null, "TURTLE");
     }

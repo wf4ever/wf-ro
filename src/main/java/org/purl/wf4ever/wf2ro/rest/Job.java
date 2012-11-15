@@ -6,7 +6,6 @@ import java.util.UUID;
 
 import org.apache.log4j.Logger;
 import org.purl.wf4ever.wf2ro.RodlConverter;
-import org.scribe.model.Token;
 
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
 import uk.org.taverna.scufl2.api.io.ReaderException;
@@ -64,7 +63,7 @@ public class Job extends Thread {
     private URI ro;
 
     /** RODL access token. */
-    private Token token;
+    private String token;
 
     /** Object holding reference to the job. */
     private JobsContainer container;
@@ -94,7 +93,7 @@ public class Job extends Thread {
         this.resource = resource;
         this.format = format;
         this.ro = ro;
-        this.token = new Token(token, null);
+        this.token = token;
         this.container = container;
         state = State.RUNNING;
 

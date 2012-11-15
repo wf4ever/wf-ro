@@ -20,7 +20,6 @@ import org.junit.Test;
 import org.purl.wf4ever.rosrs.client.common.ROSRSException;
 import org.purl.wf4ever.rosrs.client.common.ROSRService;
 import org.purl.wf4ever.wf2ro.rest.Job.State;
-import org.scribe.model.Token;
 
 import uk.org.taverna.scufl2.translator.t2flow.T2FlowReader;
 
@@ -50,6 +49,9 @@ public class RestApiTest extends JerseyTest {
     /** workflow format MIME type. */
     private static final String TAVERNA_FORMAT = T2FlowReader.APPLICATION_VND_TAVERNA_T2FLOW_XML;
 
+    /** RODL URI. */
+    private static final URI RODL_URI = URI.create("http://sandbox.wf4ever-project.org/rodl/");
+
     /** RO URI, with a random UUID as ro id. */
     private static final URI RO_URI = URI.create("http://sandbox.wf4ever-project.org/rodl/ROs/"
             + UUID.randomUUID().toString() + "/");
@@ -58,8 +60,8 @@ public class RestApiTest extends JerseyTest {
     private static final URI RO2_URI = URI.create("http://sandbox.wf4ever-project.org/rodl/ROs/"
             + UUID.randomUUID().toString() + "/");
 
-    /** RODL access token, currently assigned to Piotr. */
-    private static final Token TOKEN = new Token("47d5423c-b507-4e1c-8", null);
+    /** RODL access token, currently assigned to Wf4Ever Test User. */
+    private static final String TOKEN = "32801fc0-1df1-4e34-b";
 
     /**
      * Maximum time that the test waits for a job to finish. After that the test fails.
@@ -71,8 +73,9 @@ public class RestApiTest extends JerseyTest {
     @Override
     public void tearDown()
             throws ROSRSException {
-        ROSRService.deleteResearchObject(RO_URI, TOKEN);
-        ROSRService.deleteResearchObject(RO2_URI, TOKEN);
+        ROSRService rosrs = new ROSRService(RODL_URI, TOKEN);
+        rosrs.deleteResearchObject(RO_URI);
+        rosrs.deleteResearchObject(RO2_URI);
     }
 
 
@@ -104,7 +107,7 @@ public class RestApiTest extends JerseyTest {
         f.add("resource", WF_URI);
         f.add("format", TAVERNA_FORMAT);
         f.add("ro", RO_URI);
-        f.add("token", TOKEN.getToken());
+        f.add("token", TOKEN);
 
         //        JobConfig config = new JobConfig(WF_URI, TAVERNA_FORMAT, RO2_URI, TOKEN.getToken());
 

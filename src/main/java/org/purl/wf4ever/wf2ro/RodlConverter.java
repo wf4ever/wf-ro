@@ -11,7 +11,6 @@ import java.util.UUID;
 
 import org.purl.wf4ever.rosrs.client.common.ROSRSException;
 import org.purl.wf4ever.rosrs.client.common.ROSRService;
-import org.scribe.model.Token;
 
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
 
@@ -28,8 +27,8 @@ public class RodlConverter extends Wf2ROConverter {
     /** RO URI. */
     private final URI roURI;
 
-    /** RODL access token. */
-    private final Token rodlToken;
+    /** RODL client. */
+    private final ROSRService rosrs;
 
 
     /**
@@ -42,23 +41,23 @@ public class RodlConverter extends Wf2ROConverter {
      * @param rodlToken
      *            the RODL access token for updating the RO
      */
-    public RodlConverter(WorkflowBundle wfbundle, URI roURI, Token rodlToken) {
+    public RodlConverter(WorkflowBundle wfbundle, URI roURI, String rodlToken) {
         super(wfbundle);
+        URI rodlURI = roURI.resolve("../.."); // zrobic z tego metode i stala
+        this.rosrs = new ROSRService(rodlURI, rodlToken);
         this.roURI = roURI;
-        this.rodlToken = rodlToken;
     }
 
 
     @Override
     protected URI createResearchObject(UUID wfUUID)
             throws ROSRSException {
-        URI rodlURI = roURI.resolve("../.."); // zrobic z tego metode i stala
         String[] segments = roURI.getPath().split("/"); // stala?
         String roId = segments[segments.length - 1]; // URI utils
         try {
-            List<URI> userROs = ROSRService.getROList(rodlURI, rodlToken);
+            List<URI> userROs = rosrs.getROList(false);
             if (!userROs.contains(roURI)) {
-                ROSRService.createResearchObject(rodlURI, roId, rodlToken);
+                rosrs.createResearchObject(roId);
             }
         } catch (URISyntaxException e) {
             throw new RuntimeException(e); // tu tez
@@ -70,7 +69,7 @@ public class RodlConverter extends Wf2ROConverter {
     @Override
     protected void uploadAggregatedResource(URI researchObject, String path, InputStream in, String contentType)
             throws ROSRSException {
-        ROSRService.createResource(researchObject, path, in, contentType, rodlToken);
+        rosrs.createResource(researchObject, path, in, contentType);
     }
 
 
@@ -87,8 +86,7 @@ public class RodlConverter extends Wf2ROConverter {
         String bodyPath = ROSRService.createAnnotationBodyPath(targets.get(0).resolve(".").relativize(targets.get(0))
                 .toString()
                 + "-" + name);
-        ClientResponse response = ROSRService.addAnnotation(researchObject, targets, bodyPath, in, contentType,
-            rodlToken);
+        ClientResponse response = rosrs.addAnnotation(researchObject, targets, bodyPath, in, contentType);
         return response.getLocation();
     }
 
@@ -96,7 +94,7 @@ public class RodlConverter extends Wf2ROConverter {
     @Override
     protected void aggregateResource(URI researchObject, URI resource)
             throws ROSRSException {
-        ROSRService.aggregateResource(researchObject, resource, rodlToken);
+        rosrs.aggregateResource(researchObject, resource);
     }
 
 
