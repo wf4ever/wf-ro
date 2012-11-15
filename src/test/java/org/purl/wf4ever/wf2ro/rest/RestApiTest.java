@@ -137,7 +137,7 @@ public class RestApiTest extends JerseyTest {
             fail("The job hasn't finished on time");
         }
         assertNotNull(status.getAdded());
-        // this workflow has 3 inner annotations, plus roevo & wfdesc, plus the workflow itself = 6
-        Assert.assertEquals(6, status.getAdded().size());
+        // this workflow has 3 inner annotations, plus roevo & wfdesc, plus the workflow itself, plus 4 folders = 10
+        Assert.assertEquals(10, status.getAdded().size());
     }
 }
