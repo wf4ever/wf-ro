@@ -92,7 +92,7 @@ public class Wf2RoConverterTest {
             FolderEntry expected = e.getValue();
             Collection<FolderEntry> found = entries.get(e.getKey());
             Assert.assertNotNull(found);
-            Assert.assertTrue(found.contains(expected));
+            Assert.assertTrue(found.toString() + " contains " + expected.toString(), found.contains(expected));
         }
     }
 }

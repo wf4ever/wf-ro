@@ -150,7 +150,7 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
      *            workflow bundle
      */
     public MockupWf2ROConverter(WorkflowBundle wfbundle) {
-        super(wfbundle);
+        super(wfbundle, "testfolders.properties");
         Individual ro = manifest.createIndividual(RO_URI.toString(), RO.ResearchObject);
         Individual m = manifest.createIndividual(RO_URI.resolve(".ro/manifest.rdf").toString(), RO.ResearchObject);
         m.addProperty(ORE.describes, ro);

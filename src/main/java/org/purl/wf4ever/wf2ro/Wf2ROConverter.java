@@ -17,6 +17,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
 
+import javax.ws.rs.core.UriBuilder;
+
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.log4j.Logger;
@@ -67,15 +69,21 @@ public abstract class Wf2ROConverter {
     /** Used to guarantee that the conversion is run only once. */
     private Boolean running = false;
 
+    /** Filename with folder configuration. */
+    private String foldersPropertiesFilename;
+
 
     /**
      * The constructor.
      * 
      * @param wfbundle
      *            The t2flow/scufl2 workflow that needs to be converted to an RO.
+     * @param foldersPropertiesFilename
+     *            filename with folder configuration
      */
-    public Wf2ROConverter(WorkflowBundle wfbundle) {
+    public Wf2ROConverter(WorkflowBundle wfbundle, String foldersPropertiesFilename) {
         this.wfbundle = wfbundle;
+        this.foldersPropertiesFilename = foldersPropertiesFilename;
     }
 
 
@@ -130,7 +138,7 @@ public abstract class Wf2ROConverter {
             LOG.error("Can't upload RO evolution desc", e);
         }
         try {
-            createFolders(roURI, resourcesAdded);
+            createFolders(roURI, resourcesAdded, foldersPropertiesFilename);
         } catch (IOException | ROSRSException | ConfigurationException e) {
             LOG.error("Can't create folders", e);
         }
@@ -154,6 +162,8 @@ public abstract class Wf2ROConverter {
      *            RO URI
      * @param resourcesAdded2
      *            list to which add created folders
+     * @param foldersPropertiesFilename
+     *            filename of properties file
      * @throws ConfigurationException
      *             could not read the properties file
      * @throws IOException
@@ -161,9 +171,9 @@ public abstract class Wf2ROConverter {
      * @throws ROSRSException
      *             error communicating with ROSRS
      */
-    private void createFolders(URI roURI, List<URI> resourcesAdded2)
+    private void createFolders(URI roURI, List<URI> resourcesAdded2, String foldersPropertiesFilename)
             throws ConfigurationException, IOException, ROSRSException {
-        PropertiesConfiguration props = new PropertiesConfiguration("folders.properties");
+        PropertiesConfiguration props = new PropertiesConfiguration(foldersPropertiesFilename);
         List<Object> folders = props.getList("folder");
         if (folders == null) {
             return;
@@ -184,7 +194,13 @@ public abstract class Wf2ROConverter {
             }
             for (Object o : entries) {
                 String proxyForPath = o.toString();
-                URI proxyFor = roURI.resolve(proxyForPath);
+                URI proxyFor;
+                try {
+                    proxyFor = roURI.resolve(proxyForPath);
+                } catch (IllegalArgumentException ex) {
+                    LOG.debug(proxyForPath + " is not a valid URI");
+                    proxyFor = UriBuilder.fromUri(roURI).path(proxyForPath).build();
+                }
                 String name = props.getString("name." + proxyForPath);
                 addFolderEntry(folderURI, proxyFor, name);
             }
@@ -529,6 +545,16 @@ public abstract class Wf2ROConverter {
      */
     public List<URI> getResourcesAdded() {
         return resourcesAdded;
+    }
+
+
+    public String getFoldersPropertiesFilename() {
+        return foldersPropertiesFilename;
+    }
+
+
+    public void setFoldersPropertiesFilename(String foldersPropertiesFilename) {
+        this.foldersPropertiesFilename = foldersPropertiesFilename;
     }
 
 }

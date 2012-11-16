@@ -47,7 +47,7 @@ public class RodlConverter extends Wf2ROConverter {
      *            the RODL access token for updating the RO
      */
     public RodlConverter(WorkflowBundle wfbundle, URI roURI, String rodlToken) {
-        super(wfbundle);
+        super(wfbundle, "folders.properties");
         URI rodlURI = roURI.resolve("../.."); // zrobic z tego metode i stala
         this.rosrs = new ROSRService(rodlURI, rodlToken);
         this.roURI = roURI;
