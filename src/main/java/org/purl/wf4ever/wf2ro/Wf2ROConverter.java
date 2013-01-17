@@ -120,7 +120,7 @@ public abstract class Wf2ROConverter {
             return;
         }
         try {
-            extractAnnotations(roURI, wfbundle, resourcesAdded);
+            extractAnnotations(roURI, wfURI, wfbundle, resourcesAdded);
         } catch (IOException | ROSRSException e) {
             LOG.error("Can't extract annotations from workflow", e);
         }
@@ -306,8 +306,13 @@ public abstract class Wf2ROConverter {
      * Extract annotations from workflow bundle and upload them as RO annotations. Annotation bodies are copied as RO
      * annotation bodies, annotation targets are referenced.
      * 
+     * Update: only annotations of the workflow bundle or the main workflow are uploaded, with the workflow bundle as
+     * their target. Others are skipped because they point to resources that are not aggregated.
+     * 
      * @param roURI
      *            RO URI
+     * @param wfURI
+     *            workflow bundle ROSRS URI
      * @param wfbundle
      *            workflow bundle
      * @param resourcesAdded2
@@ -317,7 +322,7 @@ public abstract class Wf2ROConverter {
      * @throws ROSRSException
      *             ROSR service error
      */
-    private void extractAnnotations(URI roURI, final WorkflowBundle wfbundle, List<URI> resourcesAdded2)
+    private void extractAnnotations(URI roURI, URI wfURI, final WorkflowBundle wfbundle, List<URI> resourcesAdded2)
             throws IOException, ROSRSException {
         //search for annotations
         URITools tools = new URITools();
@@ -325,9 +330,15 @@ public abstract class Wf2ROConverter {
         for (Annotation annotation : annotations) {
             InputStream annBody = wfbundle.getResources()
                     .getResourceAsInputStream(annotation.getBody().toASCIIString());
-            URI target = tools.uriForBean(annotation.getTarget());
-            LOG.debug(String.format("Uploading annotation for %s taken from %s", target, annotation.getBody()));
-            resourcesAdded2.add(uploadAnnotation(roURI, "wf", Arrays.asList(target), annBody, "application/rdf+xml"));
+            if (annotation.getTarget().equals(wfbundle) || annotation.getTarget().equals(wfbundle.getMainWorkflow())) {
+                URI target = wfURI;
+                LOG.debug(String.format("Uploading annotation for %s taken from %s", target, annotation.getBody()));
+                resourcesAdded2
+                        .add(uploadAnnotation(roURI, "wf", Arrays.asList(target), annBody, "application/rdf+xml"));
+            } else {
+                URI target = tools.uriForBean(annotation.getTarget());
+                LOG.debug(String.format("Skipping annotation for %s taken from %s", target, annotation.getBody()));
+            }
         }
     }
 

@@ -56,15 +56,13 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
     /** Resources expected to be generated. */
     public static final List<String> EXPECTED_RESOURCES = Arrays.asList("http://example.org/ROs/ro1/Hello_Anyone",
         "http://example.org/ROs/ro1/.ro/body-wf-1", "http://example.org/ROs/ro1/.ro/body-wf-2",
-        "http://example.org/ROs/ro1/.ro/body-wf-3", "http://example.org/ROs/ro1/.ro/body-wf-4",
-        "http://example.org/ROs/ro1/.ro/body-wf-5", "http://example.org/ROs/ro1/.ro/body-wfdesc-6",
-        "http://example.org/ROs/ro1/.ro/body-roevo-7");
+        "http://example.org/ROs/ro1/.ro/body-wf-3", "http://example.org/ROs/ro1/.ro/body-wfdesc-4",
+        "http://example.org/ROs/ro1/.ro/body-roevo-5");
 
     /** Annotations expected to be generated. */
     public static final List<String> EXPECTED_ANNOTATIONS = Arrays.asList("http://example.org/ROs/ro1/.ro/ann-wf-1",
         "http://example.org/ROs/ro1/.ro/ann-wf-2", "http://example.org/ROs/ro1/.ro/ann-wf-3",
-        "http://example.org/ROs/ro1/.ro/ann-wf-4", "http://example.org/ROs/ro1/.ro/ann-wf-5",
-        "http://example.org/ROs/ro1/.ro/ann-wfdesc-6", "http://example.org/ROs/ro1/.ro/ann-roevo-7");
+        "http://example.org/ROs/ro1/.ro/ann-wfdesc-4", "http://example.org/ROs/ro1/.ro/ann-roevo-5");
 
     /** folders. */
     private List<URI> folders = new ArrayList<>();
