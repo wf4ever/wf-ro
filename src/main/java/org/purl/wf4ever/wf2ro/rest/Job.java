@@ -109,7 +109,7 @@ public class Job extends Thread {
         WorkflowBundleIO io = new WorkflowBundleIO();
         try {
             WorkflowBundle wfbundle = io.readBundle(resource.toURL(), format.toString());
-            converter = new RodlConverter(wfbundle, ro, this.token);
+            converter = new RodlConverter(wfbundle, resource, ro, this.token);
             converter.convert();
             state = State.DONE;
         } catch (ReaderException | IOException e) {

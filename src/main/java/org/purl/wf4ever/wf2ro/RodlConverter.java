@@ -11,6 +11,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.log4j.Logger;
 import org.purl.wf4ever.rosrs.client.common.ROSRSException;
 import org.purl.wf4ever.rosrs.client.common.ROSRService;
 import org.purl.wf4ever.rosrs.client.common.Utils;
@@ -29,11 +30,16 @@ import com.sun.jersey.api.client.ClientResponse;
  */
 public class RodlConverter extends Wf2ROConverter {
 
+    /** Logger. */
+    private static final Logger LOG = Logger.getLogger(RodlConverter.class);
+
     /** RO URI. */
     private final URI roURI;
 
     /** RODL client. */
     private final ROSRService rosrs;
+
+    private URI wfUri;
 
 
     /**
@@ -41,16 +47,34 @@ public class RodlConverter extends Wf2ROConverter {
      * 
      * @param wfbundle
      *            the workflow bundle
+     * @param wfUri
+     *            workflow URI
      * @param roURI
      *            research object URI, will be created if doesn't exist
      * @param rodlToken
      *            the RODL access token for updating the RO
      */
-    public RodlConverter(WorkflowBundle wfbundle, URI roURI, String rodlToken) {
+    public RodlConverter(WorkflowBundle wfbundle, URI wfUri, URI roURI, String rodlToken) {
         super(wfbundle, "folders.properties");
+        this.wfUri = wfUri;
         URI rodlURI = roURI.resolve("../.."); // zrobic z tego metode i stala
         this.rosrs = new ROSRService(rodlURI, rodlToken);
         this.roURI = roURI;
+    }
+
+
+    @Override
+    public void convert() {
+        super.convert();
+        // FIXME should use newer rosrs-client-common 
+        // and use the RO class for proper aggregation checking
+        if (wfUri.toString().startsWith(roURI.toString())) {
+            try {
+                rosrs.deleteResource(wfUri);
+            } catch (ROSRSException e) {
+                LOG.error("Could not delete the original workflow", e);
+            }
+        }
     }
 
 
