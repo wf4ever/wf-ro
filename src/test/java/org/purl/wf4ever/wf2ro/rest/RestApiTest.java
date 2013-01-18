@@ -171,7 +171,8 @@ public class RestApiTest extends JerseyTest {
         Client client = new Client();
         URI wfUri = null;
         try (InputStream wf = client.resource(WF_URI.toString()).get(InputStream.class)) {
-            wfUri = rosrs.createResource(ro2Uri, "workflow.t2flow", wf, TAVERNA_FORMAT).getLocation();
+            wfUri = rosrs.createResource(ro2Uri, "http://example.org/workflow.t2flow", wf, TAVERNA_FORMAT)
+                    .getLocation();
         }
 
         Form f = new Form();

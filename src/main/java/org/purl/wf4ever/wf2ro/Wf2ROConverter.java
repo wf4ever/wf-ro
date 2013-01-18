@@ -24,6 +24,7 @@ import javax.ws.rs.core.UriBuilder;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.log4j.Logger;
+import org.openrdf.rio.RDFFormat;
 import org.purl.wf4ever.rosrs.client.common.ROSRSException;
 import org.purl.wf4ever.wfdesc.scufl2.ROEvoSerializer;
 
@@ -458,7 +459,7 @@ public abstract class Wf2ROConverter {
      * @throws ROSRSException
      *             when there was a problem with getting/uploading the RO resources
      */
-    private URI addLinkAnnotation(URI roURI, URI originalWfUri, URI wfUri, URI workflowIdentifier)
+    protected URI addLinkAnnotation(URI roURI, URI originalWfUri, URI wfUri, URI workflowIdentifier)
             throws ROSRSException {
         Model model = ModelFactory.createDefaultModel();
         Resource originalR = model.createResource(originalWfUri.toString());
@@ -470,10 +471,10 @@ public abstract class Wf2ROConverter {
         Property link2 = model.createProperty("http://purl.org/pav/importedFrom");
         model.add(wfbundleR, link2, originalR);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
+        model.write(out, "TURTLE");
         ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
-        model.write(out);
 
-        return uploadAnnotation(roURI, "link", Arrays.asList(wfUri), in, "application/rdf+xml");
+        return uploadAnnotation(roURI, "link", Arrays.asList(wfUri), in, RDFFormat.TURTLE.getDefaultMIMEType());
     }
 
 
