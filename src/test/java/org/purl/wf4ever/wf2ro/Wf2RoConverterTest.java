@@ -54,7 +54,7 @@ public class Wf2RoConverterTest {
         InputStream helloWorld = getClass().getClassLoader().getResourceAsStream(HELLO_ANYONE_T2FLOW);
         WorkflowBundle wfbundle = io.readBundle(helloWorld, null);
 
-        MockupWf2ROConverter converter = new MockupWf2ROConverter(wfbundle);
+        MockupWf2ROConverter converter = new MockupWf2ROConverter(wfbundle, URI.create(HELLO_ANYONE_T2FLOW));
         converter.convert();
         System.out.println(converter.getResources().keySet());
         Assert.assertEquals(MockupWf2ROConverter.EXPECTED_ANNOTATIONS.size() + 1

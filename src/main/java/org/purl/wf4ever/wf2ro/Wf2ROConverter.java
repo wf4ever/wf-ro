@@ -3,6 +3,8 @@
  */
 package org.purl.wf4ever.wf2ro;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PipedInputStream;
@@ -35,9 +37,11 @@ import uk.org.taverna.scufl2.rdfxml.RDFXMLReader;
 
 import com.hp.hpl.jena.ontology.OntModel;
 import com.hp.hpl.jena.ontology.OntModelSpec;
+import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.Property;
 import com.hp.hpl.jena.rdf.model.RDFNode;
+import com.hp.hpl.jena.rdf.model.Resource;
 
 /**
  * This class defines the main logic of workflow-RO conversion. It is abstract because it leaves the resource upload
@@ -75,17 +79,23 @@ public abstract class Wf2ROConverter {
     /** Folder in which the workflow bundle will be stored. */
     private URI workflowBundleFolder;
 
+    /** The original workflow URI. */
+    protected URI originalWfUri;
+
 
     /**
      * The constructor.
      * 
      * @param wfbundle
      *            The t2flow/scufl2 workflow that needs to be converted to an RO.
+     * @param wfUri
+     *            workflow URI
      * @param foldersPropertiesFilename
      *            filename with folder configuration
      */
-    public Wf2ROConverter(WorkflowBundle wfbundle, String foldersPropertiesFilename) {
+    public Wf2ROConverter(WorkflowBundle wfbundle, URI wfUri, String foldersPropertiesFilename) {
         this.wfbundle = wfbundle;
+        this.originalWfUri = wfUri;
         this.foldersPropertiesFilename = foldersPropertiesFilename;
     }
 
@@ -119,46 +129,43 @@ public abstract class Wf2ROConverter {
         } catch (IOException | ROSRSException | ConfigurationException e) {
             LOG.error("Can't create folders", e);
         }
-        URI wfURI;
+        URI wfbundleUri;
         try {
             String wfpath = roURI.relativize(workflowBundleFolder.resolve(wfname)).getPath();
-            wfURI = addWorkflowBundle(roURI, wfbundle, wfpath);
+            wfbundleUri = addWorkflowBundle(roURI, wfbundle, wfpath);
             if (workflowBundleFolder != null) {
-                addFolderEntry(workflowBundleFolder, wfURI, wfname);
+                addFolderEntry(workflowBundleFolder, wfbundleUri, wfname);
             }
-            resourcesAdded.add(wfURI);
+            resourcesAdded.add(wfbundleUri);
         } catch (IOException | ROSRSException | WriterException e) {
             LOG.error("Can't upload workflow bundle", e);
             return;
         }
         try {
-            extractAnnotations(roURI, wfURI, wfbundle, resourcesAdded);
+            extractAnnotations(roURI, wfbundleUri, wfbundle, resourcesAdded);
         } catch (IOException | ROSRSException e) {
             LOG.error("Can't extract annotations from workflow", e);
         }
 
         URI wfdescURI = null;
         try {
-            wfdescURI = addWfDescAnnotation(roURI, wfbundle, wfURI);
+            wfdescURI = addWfDescAnnotation(roURI, wfbundle, wfbundleUri);
             resourcesAdded.add(wfdescURI);
         } catch (IOException | ROSRSException e) {
             LOG.error("Can't upload workflow desc", e);
         }
         try {
-            resourcesAdded.add(addRoEvoAnnotation(roURI, wfbundle, wfURI));
+            resourcesAdded.add(addRoEvoAnnotation(roURI, wfbundle, wfbundleUri));
         } catch (IOException | ROSRSException e) {
             LOG.error("Can't upload RO evolution desc", e);
         }
-        //FIXME this causes Jena problems
-        //        try {
-        //            if (wfdescURI != null) {
-        //                aggregateWorkflowDependencies(roURI, wfdescURI);
-        //            } else {
-        //                LOG.error("Can't read the workflow desc");
-        //            }
-        //        } catch (ROSRSException e) {
-        //            LOG.error("Can't aggregate resources", e);
-        //        }
+        try {
+            resourcesAdded.add(addLinkAnnotation(roURI, originalWfUri, wfbundleUri, wfbundle.getMainWorkflow()
+                    .getWorkflowIdentifier()));
+        } catch (ROSRSException e) {
+            LOG.error("Can't upload the link annotation", e);
+        }
+
     }
 
 
@@ -432,6 +439,41 @@ public abstract class Wf2ROConverter {
             }
         }).start();
         return uploadAnnotation(roURI, "wfdesc", Arrays.asList(rodlWfURI), in, TEXT_TURTLE);
+    }
+
+
+    /**
+     * Generates and adds an annotation linking the aggregated workflow bundle (ROSRS URI) with its main workflow
+     * (internal URI).
+     * 
+     * @param roURI
+     *            research object URI
+     * @param originalWfUri
+     *            original workflow Uri
+     * @param wfUri
+     *            the workflow bundle URI
+     * @param workflowIdentifier
+     *            the workflow internal URI
+     * @return the annotation body URI
+     * @throws ROSRSException
+     *             when there was a problem with getting/uploading the RO resources
+     */
+    private URI addLinkAnnotation(URI roURI, URI originalWfUri, URI wfUri, URI workflowIdentifier)
+            throws ROSRSException {
+        Model model = ModelFactory.createDefaultModel();
+        Resource originalR = model.createResource(originalWfUri.toString());
+        Resource wfbundleR = model.createResource(wfUri.toString());
+        Resource mainwfR = model.createResource(workflowIdentifier.toString());
+        //FIXME move that property to rodl-common
+        Property link = model.createProperty("http://purl.org/wf4ever/wfdesc#hasWorkflowDefinition");
+        model.add(mainwfR, link, wfbundleR);
+        Property link2 = model.createProperty("http://purl.org/pav/importedFrom");
+        model.add(wfbundleR, link2, originalR);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
+        model.write(out);
+
+        return uploadAnnotation(roURI, "link", Arrays.asList(wfUri), in, "application/rdf+xml");
     }
 
 

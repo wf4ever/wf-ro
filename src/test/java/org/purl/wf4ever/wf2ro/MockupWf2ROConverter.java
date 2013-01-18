@@ -57,12 +57,14 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
     public static final List<String> EXPECTED_RESOURCES = Arrays.asList(
         "http://example.org/ROs/ro1/folder1/Hello_Anyone.wfbundle", "http://example.org/ROs/ro1/.ro/body-wf-1",
         "http://example.org/ROs/ro1/.ro/body-wf-2", "http://example.org/ROs/ro1/.ro/body-wf-3",
-        "http://example.org/ROs/ro1/.ro/body-wfdesc-4", "http://example.org/ROs/ro1/.ro/body-roevo-5");
+        "http://example.org/ROs/ro1/.ro/body-wfdesc-4", "http://example.org/ROs/ro1/.ro/body-roevo-5",
+        "http://example.org/ROs/ro1/.ro/body-link-6");
 
     /** Annotations expected to be generated. */
     public static final List<String> EXPECTED_ANNOTATIONS = Arrays.asList("http://example.org/ROs/ro1/.ro/ann-wf-1",
         "http://example.org/ROs/ro1/.ro/ann-wf-2", "http://example.org/ROs/ro1/.ro/ann-wf-3",
-        "http://example.org/ROs/ro1/.ro/ann-wfdesc-4", "http://example.org/ROs/ro1/.ro/ann-roevo-5");
+        "http://example.org/ROs/ro1/.ro/ann-wfdesc-4", "http://example.org/ROs/ro1/.ro/ann-roevo-5",
+        "http://example.org/ROs/ro1/.ro/ann-link-6");
 
     /** folders. */
     private List<URI> folders = new ArrayList<>();
@@ -146,9 +148,11 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
      * 
      * @param wfbundle
      *            workflow bundle
+     * @param wfUri
+     *            workflow URI
      */
-    public MockupWf2ROConverter(WorkflowBundle wfbundle) {
-        super(wfbundle, "testfolders.properties");
+    public MockupWf2ROConverter(WorkflowBundle wfbundle, URI wfUri) {
+        super(wfbundle, wfUri, "testfolders.properties");
         Individual ro = manifest.createIndividual(RO_URI.toString(), RO.ResearchObject);
         Individual m = manifest.createIndividual(RO_URI.resolve(".ro/manifest.rdf").toString(), RO.ResearchObject);
         m.addProperty(ORE.describes, ro);

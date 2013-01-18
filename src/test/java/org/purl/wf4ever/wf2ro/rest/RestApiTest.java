@@ -57,8 +57,7 @@ public class RestApiTest extends JerseyTest {
     private static final URI RODL_URI = URI.create("http://sandbox.wf4ever-project.org/rodl/");
 
     /** RO URI, with a random UUID as ro id. */
-    private static final URI RO_URI = URI.create("http://sandbox.wf4ever-project.org/rodl/ROs/"
-            + UUID.randomUUID().toString() + "/");
+    private static final URI RO_URI = RODL_URI.resolve("ROs/" + UUID.randomUUID().toString() + "/");
 
     /** RO URI, with a random UUID as ro id. */
     private static URI ro2Uri;
@@ -142,8 +141,8 @@ public class RestApiTest extends JerseyTest {
             fail("The job hasn't finished on time");
         }
         assertNotNull(status.getAdded());
-        // this workflow has 3 inner annotations, plus roevo & wfdesc, plus the workflow itself, plus 16 folders = 22
-        Assert.assertEquals(22, status.getAdded().size());
+        // this workflow has 3 inner annotations, plus roevo & wfdesc & link, plus the workflow itself, plus 16 folders = 22
+        Assert.assertEquals(23, status.getAdded().size());
     }
 
 
@@ -207,8 +206,8 @@ public class RestApiTest extends JerseyTest {
             fail("The job hasn't finished on time");
         }
         assertNotNull(status.getAdded());
-        // this workflow has 3 inner annotations, plus roevo & wfdesc, plus the workflow itself, plus 16 folders = 22
-        Assert.assertEquals(22, status.getAdded().size());
+        // this workflow has 3 inner annotations, plus roevo & wfdesc & link, plus the workflow itself, plus 16 folders = 22
+        Assert.assertEquals(23, status.getAdded().size());
 
         response = client.resource(wfUri).get(ClientResponse.class);
         Assert.assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());

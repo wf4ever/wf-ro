@@ -39,8 +39,6 @@ public class RodlConverter extends Wf2ROConverter {
     /** RODL client. */
     private final ROSRService rosrs;
 
-    private URI wfUri;
-
 
     /**
      * Constructor.
@@ -55,8 +53,7 @@ public class RodlConverter extends Wf2ROConverter {
      *            the RODL access token for updating the RO
      */
     public RodlConverter(WorkflowBundle wfbundle, URI wfUri, URI roURI, String rodlToken) {
-        super(wfbundle, "folders.properties");
-        this.wfUri = wfUri;
+        super(wfbundle, wfUri, "folders.properties");
         URI rodlURI = roURI.resolve("../.."); // zrobic z tego metode i stala
         this.rosrs = new ROSRService(rodlURI, rodlToken);
         this.roURI = roURI;
@@ -68,9 +65,9 @@ public class RodlConverter extends Wf2ROConverter {
         super.convert();
         // FIXME should use newer rosrs-client-common 
         // and use the RO class for proper aggregation checking
-        if (wfUri.toString().startsWith(roURI.toString())) {
+        if (originalWfUri.toString().startsWith(roURI.toString())) {
             try {
-                rosrs.deleteResource(wfUri);
+                rosrs.deleteResource(originalWfUri);
             } catch (ROSRSException e) {
                 LOG.error("Could not delete the original workflow", e);
             }
