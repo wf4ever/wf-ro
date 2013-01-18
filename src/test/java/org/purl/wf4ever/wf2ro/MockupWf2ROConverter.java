@@ -54,10 +54,10 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
     private int annCnt = 0;
 
     /** Resources expected to be generated. */
-    public static final List<String> EXPECTED_RESOURCES = Arrays.asList("http://example.org/ROs/ro1/Hello_Anyone",
-        "http://example.org/ROs/ro1/.ro/body-wf-1", "http://example.org/ROs/ro1/.ro/body-wf-2",
-        "http://example.org/ROs/ro1/.ro/body-wf-3", "http://example.org/ROs/ro1/.ro/body-wfdesc-4",
-        "http://example.org/ROs/ro1/.ro/body-roevo-5");
+    public static final List<String> EXPECTED_RESOURCES = Arrays.asList(
+        "http://example.org/ROs/ro1/folder1/Hello_Anyone.wfbundle", "http://example.org/ROs/ro1/.ro/body-wf-1",
+        "http://example.org/ROs/ro1/.ro/body-wf-2", "http://example.org/ROs/ro1/.ro/body-wf-3",
+        "http://example.org/ROs/ro1/.ro/body-wfdesc-4", "http://example.org/ROs/ro1/.ro/body-roevo-5");
 
     /** Annotations expected to be generated. */
     public static final List<String> EXPECTED_ANNOTATIONS = Arrays.asList("http://example.org/ROs/ro1/.ro/ann-wf-1",
@@ -159,6 +159,9 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
             new FolderEntry(URI.create("http://example.org/ROs/ro1/folder1/folder1a/"), null));
         EXPECTED_ENTRIES.put(URI.create("http://example.org/ROs/ro1/folder%202/"),
             new FolderEntry(URI.create("http://google.com"), "Google/"));
+        EXPECTED_ENTRIES.put(URI.create("http://example.org/ROs/ro1/folder1/"),
+            new FolderEntry(URI.create("http://example.org/ROs/ro1/folder1/Hello_Anyone.wfbundle"),
+                    "Hello_Anyone.wfbundle"));
     }
 
 

@@ -57,13 +57,13 @@ public abstract class Wf2ROConverter {
     /** Logger. */
     private static final Logger LOG = Logger.getLogger(Wf2ROConverter.class);
 
-    /** Workflow serializer/deserializer. */
+    /** Workflow bundle serializer/deserializer. */
     private static WorkflowBundleIO bundleIO = new WorkflowBundleIO();
 
     /** Resources added so far. */
     private List<URI> resourcesAdded = Collections.synchronizedList(new ArrayList<URI>());
 
-    /** Workflow. */
+    /** Workflow bundle. */
     private WorkflowBundle wfbundle;
 
     /** Used to guarantee that the conversion is run only once. */
@@ -71,6 +71,9 @@ public abstract class Wf2ROConverter {
 
     /** Filename with folder configuration. */
     private String foldersPropertiesFilename;
+
+    /** Folder in which the workflow bundle will be stored. */
+    private URI workflowBundleFolder;
 
 
     /**
@@ -103,7 +106,7 @@ public abstract class Wf2ROConverter {
             running = true;
         }
         UUID wfUUID = getWorkflowBundleUUID(wfbundle);
-        String wfname = wfbundle.getMainWorkflow().getName();
+        String wfname = wfbundle.getMainWorkflow().getName() + ".wfbundle";
         URI roURI = null;
         try {
             roURI = createResearchObject(wfUUID);
@@ -111,9 +114,18 @@ public abstract class Wf2ROConverter {
             LOG.error("Can't create RO", e);
             return;
         }
+        try {
+            createFolders(roURI, resourcesAdded, foldersPropertiesFilename);
+        } catch (IOException | ROSRSException | ConfigurationException e) {
+            LOG.error("Can't create folders", e);
+        }
         URI wfURI;
         try {
-            wfURI = addWorkflowBundle(roURI, wfbundle, wfname);
+            String wfpath = roURI.relativize(workflowBundleFolder.resolve(wfname)).getPath();
+            wfURI = addWorkflowBundle(roURI, wfbundle, wfpath);
+            if (workflowBundleFolder != null) {
+                addFolderEntry(workflowBundleFolder, wfURI, wfname);
+            }
             resourcesAdded.add(wfURI);
         } catch (IOException | ROSRSException | WriterException e) {
             LOG.error("Can't upload workflow bundle", e);
@@ -136,11 +148,6 @@ public abstract class Wf2ROConverter {
             resourcesAdded.add(addRoEvoAnnotation(roURI, wfbundle, wfURI));
         } catch (IOException | ROSRSException e) {
             LOG.error("Can't upload RO evolution desc", e);
-        }
-        try {
-            createFolders(roURI, resourcesAdded, foldersPropertiesFilename);
-        } catch (IOException | ROSRSException | ConfigurationException e) {
-            LOG.error("Can't create folders", e);
         }
         //FIXME this causes Jena problems
         //        try {
@@ -205,6 +212,12 @@ public abstract class Wf2ROConverter {
                 addFolderEntry(folderURI, proxyFor, name);
             }
         }
+        String wfbundleFolder = props.getString("folder.wfbundle");
+        if (wfbundleFolder == null || !folderURIs.containsKey(wfbundleFolder)) {
+            throw new ConfigurationException("Incorrect workflow bundle folder: " + wfbundleFolder);
+        } else {
+            workflowBundleFolder = folderURIs.get(wfbundleFolder);
+        }
     }
 
 
@@ -264,8 +277,8 @@ public abstract class Wf2ROConverter {
      *            research object URI
      * @param wfbundle
      *            the workflow bundle
-     * @param wfID
-     *            workflow bundle id
+     * @param wfPath
+     *            workflow bundle path
      * @return the workflow bundle URI as in the manifest or null if uploading failed
      * @throws IOException
      *             when there was a problem with getting/uploading the RO resources
@@ -274,7 +287,7 @@ public abstract class Wf2ROConverter {
      * @throws WriterException
      *             workflow bundle error
      */
-    protected URI addWorkflowBundle(URI roURI, final WorkflowBundle wfbundle, String wfID)
+    protected URI addWorkflowBundle(URI roURI, final WorkflowBundle wfbundle, String wfPath)
             throws IOException, ROSRSException, WriterException {
         //save the scufl2
         final PipedInputStream in = new PipedInputStream();
@@ -296,9 +309,9 @@ public abstract class Wf2ROConverter {
                 }
             }
         }).start();
-        uploadAggregatedResource(roURI, wfID, in, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
+        uploadAggregatedResource(roURI, wfPath, in, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
 
-        return roURI.resolve(wfID);
+        return roURI.resolve(wfPath);
     }
 
 
