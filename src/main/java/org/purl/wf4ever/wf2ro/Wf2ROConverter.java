@@ -65,6 +65,9 @@ public abstract class Wf2ROConverter {
     /** Workflow bundle serializer/deserializer. */
     private static WorkflowBundleIO bundleIO = new WorkflowBundleIO();
 
+    /** Scufl2 URI helpers */
+    private static URITools uriTools = new URITools();
+    
     /** Resources added so far. */
     private List<URI> resourcesAdded = Collections.synchronizedList(new ArrayList<URI>());
 
@@ -161,8 +164,8 @@ public abstract class Wf2ROConverter {
             LOG.error("Can't upload RO evolution desc", e);
         }
         try {
-            resourcesAdded.add(addLinkAnnotation(roURI, originalWfUri, wfbundleUri, wfbundle.getMainWorkflow()
-                    .getWorkflowIdentifier()));
+            URI internalWorkflowURI = uriTools.uriForBean(wfbundle.getMainWorkflow());
+			resourcesAdded.add(addLinkAnnotation(roURI, originalWfUri, wfbundleUri, internalWorkflowURI));
         } catch (ROSRSException e) {
             LOG.error("Can't upload the link annotation", e);
         }

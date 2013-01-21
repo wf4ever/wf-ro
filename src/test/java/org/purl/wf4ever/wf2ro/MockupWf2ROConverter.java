@@ -38,7 +38,9 @@ import com.hp.hpl.jena.rdf.model.Resource;
  */
 public class MockupWf2ROConverter extends Wf2ROConverter {
 
-    /** Logger. */
+    public static final String BODY_LINK_WFDEF = "http://example.org/ROs/ro1/.ro/body-link-6";
+
+	/** Logger. */
     private static final Logger LOGGER = Logger.getLogger(MockupWf2ROConverter.class);
 
     /** map to hold resources. */
@@ -58,7 +60,7 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
         "http://example.org/ROs/ro1/folder1/Hello_Anyone.wfbundle", "http://example.org/ROs/ro1/.ro/body-wf-1",
         "http://example.org/ROs/ro1/.ro/body-wf-2", "http://example.org/ROs/ro1/.ro/body-wf-3",
         "http://example.org/ROs/ro1/.ro/body-wfdesc-4", "http://example.org/ROs/ro1/.ro/body-roevo-5",
-        "http://example.org/ROs/ro1/.ro/body-link-6");
+        BODY_LINK_WFDEF);
 
     /** Annotations expected to be generated. */
     public static final List<String> EXPECTED_ANNOTATIONS = Arrays.asList("http://example.org/ROs/ro1/.ro/ann-wf-1",
