@@ -142,7 +142,7 @@ public class Wf2RoConverterTest {
 
 
     /**
-     * A helper method for verifying the correct link between the workflow bundle and its main worklow.
+     * A helper method for verifying the correct annotations taken from the t2flow.
      * 
      * @param converter
      *            a mockup converter that should contain the link in its resources

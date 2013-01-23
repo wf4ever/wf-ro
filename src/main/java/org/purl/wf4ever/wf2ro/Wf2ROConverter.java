@@ -352,13 +352,21 @@ public abstract class Wf2ROConverter {
         URITools tools = new URITools();
         NamedSet<Annotation> annotations = wfbundle.getAnnotations();
         for (Annotation annotation : annotations) {
-            InputStream annBody = wfbundle.getResources()
-                    .getResourceAsInputStream(annotation.getBody().toASCIIString());
             if (annotation.getTarget().equals(wfbundle) || annotation.getTarget().equals(wfbundle.getMainWorkflow())) {
                 URI target = wfURI;
                 LOG.debug(String.format("Uploading annotation for %s taken from %s", target, annotation.getBody()));
-                resourcesAdded2
-                        .add(uploadAnnotation(roURI, "wf", Arrays.asList(target), annBody, "application/rdf+xml"));
+                Model annBody = ModelFactory.createDefaultModel();
+                try (InputStream wfAnnBody = wfbundle.getResources().getResourceAsInputStream(
+                    annotation.getBody().toASCIIString())) {
+                    annBody.read(wfAnnBody, wfbundle.getGlobalBaseURI().resolve(annotation.getBody()).toASCIIString());
+                }
+                try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+                    annBody.write(out);
+                    try (ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray())) {
+                        resourcesAdded2.add(uploadAnnotation(roURI, "wf", Arrays.asList(target), in,
+                            "application/rdf+xml"));
+                    }
+                }
             } else {
                 URI target = tools.uriForBean(annotation.getTarget());
                 LOG.debug(String.format("Skipping annotation for %s taken from %s", target, annotation.getBody()));
