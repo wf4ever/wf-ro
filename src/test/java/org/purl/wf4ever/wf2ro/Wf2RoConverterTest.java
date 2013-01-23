@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.junit.Test;
+import org.openrdf.rio.RDFFormat;
 import org.purl.wf4ever.wf2ro.MockupWf2ROConverter.FolderEntry;
 
 import pl.psnc.dl.wf4ever.vocabulary.ORE;
@@ -38,15 +39,16 @@ import com.hp.hpl.jena.rdf.model.Resource;
  */
 public class Wf2RoConverterTest {
 
+    /** workflow bundle URI. */
     private static final String HELLO_ANYONE_WFBUNDLE = "http://example.org/ROs/ro1/folder1/Hello_Anyone.wfbundle";
 
-	private static final String HAS_WF_DEF = "http://purl.org/wf4ever/wfdesc#hasWorkflowDefinition";
+    /** the link between the workflow bundle and the main workflow. */
+    private static final String HAS_WF_DEF = "http://purl.org/wf4ever/wfdesc#hasWorkflowDefinition";
 
-	private static final String WF_URI = "http://ns.taverna.org.uk/2010/workflowBundle/01348671-5aaa-4cc2-84cc-477329b70b0d/workflow/Hello_Anyone/";
+    /** the main worfklow URI. */
+    private static final String WF_URI = "http://ns.taverna.org.uk/2010/workflowBundle/01348671-5aaa-4cc2-84cc-477329b70b0d/workflow/Hello_Anyone/";
 
-	private static final String TURTLE = "TURTLE";
-
-	/** Workflow name, in src/test/resources. */
+    /** Workflow name, in src/test/resources. */
     private static final String HELLO_ANYONE_T2FLOW = "helloanyone.t2flow";
 
     /** Workflow name, in src/test/resources. */
@@ -72,8 +74,9 @@ public class Wf2RoConverterTest {
         MockupWf2ROConverter converter = new MockupWf2ROConverter(wfbundle, URI.create(HELLO_ANYONE_T2FLOW));
         converter.convert();
         System.out.println(converter.getResources().keySet());
-        assertEquals(MockupWf2ROConverter.EXPECTED_ANNOTATIONS.size() + 1
-                + MockupWf2ROConverter.EXPECTED_FOLDERS.size(), converter.getResourcesAdded().size());
+        assertEquals(
+            MockupWf2ROConverter.EXPECTED_ANNOTATIONS.size() + 1 + MockupWf2ROConverter.EXPECTED_FOLDERS.size(),
+            converter.getResourcesAdded().size());
 
         OntModel model = converter.createManifestModel(null);
         Individual ro = model.getIndividual(converter.createResearchObject(null).toString());
@@ -86,8 +89,7 @@ public class Wf2RoConverterTest {
         for (RDFNode node : aggregatedResources) {
             assertTrue(node.isURIResource());
             Individual ind = node.as(Individual.class);
-            assertTrue("Wf or annotation",
-                ind.hasRDFType(RO.Resource) || ind.hasRDFType(RO.AggregatedAnnotation));
+            assertTrue("Wf or annotation", ind.hasRDFType(RO.Resource) || ind.hasRDFType(RO.AggregatedAnnotation));
             if (ind.hasRDFType(RO.Resource)) {
                 assertTrue("Path " + ind.getURI() + " is expected",
                     MockupWf2ROConverter.EXPECTED_RESOURCES.contains(ind.getURI()));
@@ -96,10 +98,9 @@ public class Wf2RoConverterTest {
                     MockupWf2ROConverter.EXPECTED_ANNOTATIONS.contains(ind.getURI()));
             }
         }
-        
-        
+
         checkHasWorkflowDefinition(converter);
-        
+
         List<URI> folders = converter.getFolders();
         assertEquals(MockupWf2ROConverter.EXPECTED_FOLDERS.size(), folders.size());
         for (URI uri : MockupWf2ROConverter.EXPECTED_FOLDERS) {
@@ -116,18 +117,22 @@ public class Wf2RoConverterTest {
     }
 
 
-	protected void checkHasWorkflowDefinition(MockupWf2ROConverter converter) {
-		String hasWorkflowDefBody = converter.getResources().get(
-				URI.create(MockupWf2ROConverter.BODY_LINK_WFDEF));
-		// System.out.println(hasWorkflowDefBody);
-		OntModel hasWorkflowDefModel = ModelFactory
-				.createOntologyModel(OntModelSpec.OWL_LITE_MEM);
-		hasWorkflowDefModel.read(new StringReader(hasWorkflowDefBody),
-				MockupWf2ROConverter.RO_URI.toASCIIString(), TURTLE);
-		Property hasWfDef = hasWorkflowDefModel.getProperty(HAS_WF_DEF);
-		Individual wf = hasWorkflowDefModel.getIndividual(WF_URI);
-		assertNotNull("Could not find Workflow " + WF_URI, wf);
-		Resource wfDef = wf.getPropertyResourceValue(hasWfDef);
-		assertEquals(HELLO_ANYONE_WFBUNDLE, wfDef.getURI());
-	}
+    /**
+     * A helper method for verifying the correct link between the workflow bundle and its main worklow.
+     * 
+     * @param converter
+     *            a mockup converter that should contain the link in its resources
+     */
+    protected void checkHasWorkflowDefinition(MockupWf2ROConverter converter) {
+        String hasWorkflowDefBody = converter.getResources().get(URI.create(MockupWf2ROConverter.BODY_LINK_WFDEF));
+        // System.out.println(hasWorkflowDefBody);
+        OntModel hasWorkflowDefModel = ModelFactory.createOntologyModel(OntModelSpec.OWL_LITE_MEM);
+        hasWorkflowDefModel.read(new StringReader(hasWorkflowDefBody), MockupWf2ROConverter.RO_URI.toASCIIString(),
+            RDFFormat.TURTLE.getName().toUpperCase());
+        Property hasWfDef = hasWorkflowDefModel.getProperty(HAS_WF_DEF);
+        Individual wf = hasWorkflowDefModel.getIndividual(WF_URI);
+        assertNotNull("Could not find Workflow " + WF_URI, wf);
+        Resource wfDef = wf.getPropertyResourceValue(hasWfDef);
+        assertEquals(HELLO_ANYONE_WFBUNDLE, wfDef.getURI());
+    }
 }
