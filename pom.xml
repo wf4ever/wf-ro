@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.purl.wf4ever</groupId>
 	<artifactId>wf-ro</artifactId>
-	<version>0.7.2-SNAPSHOT</version>
+	<version>0.7.2</version>
 	<packaging>war</packaging>
 	<name>Workflow to RO</name>
 	<description>Convert a t2flow workflow to an RO</description>
@@ -15,7 +15,7 @@
 	</properties>
 	<scm>
 		<developerConnection>scm:git:git@github.com:wf4ever/wf-ro.git</developerConnection>
-	  <tag>HEAD</tag>
+	  <tag>wf-ro-0.7.2</tag>
   </scm>
 	<repositories>
 		<repository>
