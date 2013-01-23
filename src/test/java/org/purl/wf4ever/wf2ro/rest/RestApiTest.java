@@ -74,12 +74,13 @@ public class RestApiTest extends JerseyTest {
     @After
     @Override
     public void tearDown()
-            throws ROSRSException {
+            throws Exception {
         ROSRService rosrs = new ROSRService(RODL_URI, TOKEN);
         rosrs.deleteResearchObject(RO_URI);
         if (ro2Uri != null) {
             rosrs.deleteResearchObject(ro2Uri);
         }
+        super.tearDown();
     }
 
 
