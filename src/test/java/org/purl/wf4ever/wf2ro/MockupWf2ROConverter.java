@@ -38,6 +38,10 @@ import com.hp.hpl.jena.rdf.model.Resource;
  */
 public class MockupWf2ROConverter extends Wf2ROConverter {
 
+    /** a constant for the bodies of annotations extracted from the t2flow. */
+    public static final String[] BODY_WF_ANNOTATIONS = { "http://example.org/ROs/ro1/.ro/body-wf-1",
+            "http://example.org/ROs/ro1/.ro/body-wf-2", "http://example.org/ROs/ro1/.ro/body-wf-3" };
+
     /** a constant for the resource which has the link between the workflow bundle and the main workflow. */
     public static final String BODY_LINK_WFDEF = "http://example.org/ROs/ro1/.ro/body-link-6";
 
