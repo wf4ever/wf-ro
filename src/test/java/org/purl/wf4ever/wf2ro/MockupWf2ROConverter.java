@@ -64,7 +64,8 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
     public static final List<String> EXPECTED_RESOURCES = Arrays.asList(
         "http://example.org/ROs/ro1/folder1/Hello_Anyone.wfbundle", "http://example.org/ROs/ro1/.ro/body-wf-1",
         "http://example.org/ROs/ro1/.ro/body-wf-2", "http://example.org/ROs/ro1/.ro/body-wf-3",
-        "http://example.org/ROs/ro1/.ro/body-wfdesc-4", "http://example.org/ROs/ro1/.ro/body-roevo-5", BODY_LINK_WFDEF);
+        "http://example.org/ROs/ro1/.ro/body-wfdesc-4", "http://example.org/ROs/ro1/.ro/body-roevo-5", BODY_LINK_WFDEF,
+        "helloanyone.t2flow");
 
     /** Annotations expected to be generated. */
     public static final List<String> EXPECTED_ANNOTATIONS = Arrays.asList("http://example.org/ROs/ro1/.ro/ann-wf-1",
@@ -172,6 +173,8 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
         EXPECTED_ENTRIES.put(URI.create("http://example.org/ROs/ro1/folder1/"),
             new FolderEntry(URI.create("http://example.org/ROs/ro1/folder1/Hello_Anyone.wfbundle"),
                     "Hello_Anyone.wfbundle"));
+        EXPECTED_ENTRIES.put(URI.create("http://example.org/ROs/ro1/folder3/"),
+            new FolderEntry(URI.create("helloanyone.t2flow"), null));
     }
 
 

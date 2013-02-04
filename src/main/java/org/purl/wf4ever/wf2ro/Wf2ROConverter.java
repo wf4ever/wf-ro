@@ -83,6 +83,9 @@ public abstract class Wf2ROConverter {
     /** Folder in which the workflow bundle will be stored. */
     private URI workflowBundleFolder;
 
+    /** Folder in which the original workflow will be stored. */
+    private URI workflowFolder;
+
     /** The original workflow URI. */
     protected URI originalWfUri;
 
@@ -130,6 +133,10 @@ public abstract class Wf2ROConverter {
         }
         try {
             createFolders(roURI, resourcesAdded, foldersPropertiesFilename);
+            if (workflowFolder != null) {
+                aggregateResource(roURI, originalWfUri);
+                addFolderEntry(workflowFolder, originalWfUri, null);
+            }
         } catch (IOException | ROSRSException | ConfigurationException e) {
             LOG.error("Can't create folders", e);
         }
@@ -228,6 +235,12 @@ public abstract class Wf2ROConverter {
             throw new ConfigurationException("Incorrect workflow bundle folder: " + wfbundleFolder);
         } else {
             workflowBundleFolder = folderURIs.get(wfbundleFolder);
+        }
+        String wfFolder = props.getString("folder.wf");
+        if (wfFolder == null || !folderURIs.containsKey(wfFolder)) {
+            throw new ConfigurationException("Incorrect workflow  folder: " + wfFolder);
+        } else {
+            workflowFolder = folderURIs.get(wfFolder);
         }
     }
 

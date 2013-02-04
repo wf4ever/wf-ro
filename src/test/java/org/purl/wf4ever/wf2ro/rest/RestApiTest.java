@@ -17,7 +17,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import junit.framework.Assert;
 
-import org.apache.http.HttpStatus;
 import org.junit.After;
 import org.junit.Test;
 import org.purl.wf4ever.rosrs.client.common.ROSRSException;
@@ -53,10 +52,8 @@ public class RestApiTest extends JerseyTest {
     /** workflow format MIME type. */
     private static final String TAVERNA_FORMAT = T2FlowReader.APPLICATION_VND_TAVERNA_T2FLOW_XML;
 
-    //    /** RODL URI. */
-    //    private static final URI RODL_URI = URI.create("http://sandbox.wf4ever-project.org/rodl/");
     /** RODL URI. */
-    private static final URI RODL_URI = URI.create("http://localhost:8082/");
+    private static final URI RODL_URI = URI.create("http://sandbox.wf4ever-project.org/rodl/");
 
     /** RO URI, with a random UUID as ro id. */
     private static final URI RO_URI = RODL_URI.resolve("ROs/" + UUID.randomUUID().toString() + "/");
@@ -212,9 +209,6 @@ public class RestApiTest extends JerseyTest {
         assertNotNull(status.getAdded());
         // this workflow has 3 inner annotations, plus roevo & wfdesc & link, plus the workflow itself, plus 16 folders = 22
         Assert.assertEquals(23, status.getAdded().size());
-
-        response = client.resource(wfUri).get(ClientResponse.class);
-        Assert.assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
         response.close();
     }
 

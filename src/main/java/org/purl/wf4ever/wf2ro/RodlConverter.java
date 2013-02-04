@@ -34,6 +34,7 @@ import com.sun.jersey.api.client.ClientResponse;
 public class RodlConverter extends Wf2ROConverter {
 
     /** Logger. */
+    @SuppressWarnings("unused")
     private static final Logger LOG = Logger.getLogger(RodlConverter.class);
 
     /** RO URI. */
@@ -60,21 +61,6 @@ public class RodlConverter extends Wf2ROConverter {
         URI rodlURI = roURI.resolve("../.."); // zrobic z tego metode i stala
         this.rosrs = new ROSRService(rodlURI, rodlToken);
         this.roURI = roURI;
-    }
-
-
-    @Override
-    public void convert() {
-        super.convert();
-        // FIXME should use newer rosrs-client-common 
-        // and use the RO class for proper aggregation checking
-        if (originalWfUri.toString().startsWith(roURI.toString())) {
-            try {
-                rosrs.deleteResource(originalWfUri);
-            } catch (ROSRSException e) {
-                LOG.error("Could not delete the original workflow", e);
-            }
-        }
     }
 
 
