@@ -17,7 +17,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import junit.framework.Assert;
 
-import org.apache.http.HttpStatus;
 import org.junit.After;
 import org.junit.Test;
 import org.purl.wf4ever.rosrs.client.common.ROSRSException;
@@ -210,9 +209,6 @@ public class RestApiTest extends JerseyTest {
         assertNotNull(status.getAdded());
         // this workflow has 3 inner annotations, plus roevo & wfdesc & link, plus the workflow itself, plus 16 folders = 22
         Assert.assertEquals(23, status.getAdded().size());
-
-        response = client.resource(wfUri).get(ClientResponse.class);
-        Assert.assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
         response.close();
     }
 
