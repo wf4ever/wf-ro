@@ -8,6 +8,7 @@
 	<description>Convert a t2flow workflow to an RO</description>
 	<properties>
 		<scufl2.version>0.11.0-SNAPSHOT</scufl2.version>
+		<scufl2-wfdesc.version>0.3.0-SNAPSHOT</scufl2-wfdesc.version>
 		<jersey.version>1.15</jersey.version>
 		<jetty.version>6.1.4</jetty.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -63,7 +64,7 @@
 		<dependency>
 			<groupId>org.purl.wf4ever</groupId>
 			<artifactId>scufl2-wfdesc</artifactId>
-			<version>0.2-biovel-SNAPSHOT</version>
+            <version>${scufl2-wfdesc.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.jena</groupId>
