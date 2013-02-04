@@ -53,10 +53,8 @@ public class RestApiTest extends JerseyTest {
     /** workflow format MIME type. */
     private static final String TAVERNA_FORMAT = T2FlowReader.APPLICATION_VND_TAVERNA_T2FLOW_XML;
 
-    //    /** RODL URI. */
-    //    private static final URI RODL_URI = URI.create("http://sandbox.wf4ever-project.org/rodl/");
     /** RODL URI. */
-    private static final URI RODL_URI = URI.create("http://localhost:8082/");
+    private static final URI RODL_URI = URI.create("http://sandbox.wf4ever-project.org/rodl/");
 
     /** RO URI, with a random UUID as ro id. */
     private static final URI RO_URI = RODL_URI.resolve("ROs/" + UUID.randomUUID().toString() + "/");
