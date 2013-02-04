@@ -7,7 +7,7 @@
 	<name>Wf-RO transformation service</name>
 	<description>Convert a t2flow workflow to an RO</description>
 	<properties>
-		<scufl2.version>0.11-SNAPSHOT</scufl2.version>
+		<scufl2.version>0.11.0-SNAPSHOT</scufl2.version>
 		<jersey.version>1.15</jersey.version>
 		<jetty.version>6.1.4</jetty.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
