@@ -11,6 +11,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
+import javax.ws.rs.core.UriBuilder;
+
+import org.apache.http.HttpStatus;
 import org.apache.log4j.Logger;
 import org.purl.wf4ever.rosrs.client.common.ROSRSException;
 import org.purl.wf4ever.rosrs.client.common.ROSRService;
@@ -134,6 +137,10 @@ public class RodlConverter extends Wf2ROConverter {
     protected URI createFolder(URI roURI, String path)
             throws ROSRSException {
         ClientResponse response = rosrs.createFolder(roURI, path);
+        if (response.getStatus() == HttpStatus.SC_CONFLICT) {
+            response.close();
+            return UriBuilder.fromUri(roURI).path(path).build();
+        }
         Multimap<String, URI> links = Utils.getLinkHeaders(response.getHeaders().get("Link"));
         Iterator<URI> it = links.get(ORE.proxyFor.getURI()).iterator();
         response.close();
@@ -149,7 +156,7 @@ public class RodlConverter extends Wf2ROConverter {
     protected URI addFolderEntry(URI folder, URI proxyFor, String name)
             throws IOException, ROSRSException {
         ClientResponse response = rosrs.addFolderEntry(folder, proxyFor, name);
-        URI entry = response.getLocation();
+        URI entry = response.getStatus() == HttpStatus.SC_CREATED ? response.getLocation() : null;
         response.close();
         return entry;
     }

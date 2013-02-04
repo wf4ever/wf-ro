@@ -53,8 +53,10 @@ public class RestApiTest extends JerseyTest {
     /** workflow format MIME type. */
     private static final String TAVERNA_FORMAT = T2FlowReader.APPLICATION_VND_TAVERNA_T2FLOW_XML;
 
+    //    /** RODL URI. */
+    //    private static final URI RODL_URI = URI.create("http://sandbox.wf4ever-project.org/rodl/");
     /** RODL URI. */
-    private static final URI RODL_URI = URI.create("http://sandbox.wf4ever-project.org/rodl/");
+    private static final URI RODL_URI = URI.create("http://localhost:8082/");
 
     /** RO URI, with a random UUID as ro id. */
     private static final URI RO_URI = RODL_URI.resolve("ROs/" + UUID.randomUUID().toString() + "/");
@@ -214,5 +216,74 @@ public class RestApiTest extends JerseyTest {
         response = client.resource(wfUri).get(ClientResponse.class);
         Assert.assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
         response.close();
+    }
+
+
+    /**
+     * Call the service twice on the same RO.
+     * 
+     * @throws ROSRSException
+     *             error creating the ro
+     * @throws IOException
+     *             error downloading the workflow
+     * @throws InterruptedException
+     *             interrupted while waiting for a job to finish
+     */
+    @Test
+    public void testDoubleExecution()
+            throws ROSRSException, IOException, InterruptedException {
+        WebResource webResource;
+        if (resource().getURI().getHost().equals("localhost")) {
+            webResource = resource();
+        } else {
+            webResource = resource().path("wf-ro/");
+        }
+        Form f = new Form();
+        f.add("resource", WF_URI);
+        f.add("format", TAVERNA_FORMAT);
+        f.add("ro", RO_URI);
+        f.add("token", TOKEN);
+
+        ClientResponse response = webResource.path("jobs").post(ClientResponse.class, f);
+        assertEquals(HttpServletResponse.SC_CREATED, response.getStatus());
+        URI jobURI = response.getLocation();
+        response.close();
+
+        JobStatus status = null;
+
+        for (int i = 0; i < MAX_JOB_TIME_S; i++) {
+            System.out.print(".");
+            status = webResource.uri(jobURI).get(JobStatus.class);
+            if (status.getStatus() == State.DONE) {
+                System.out.println();
+                break;
+            }
+            Thread.sleep(1000);
+        }
+        System.out.println(webResource.uri(jobURI).get(String.class));
+        if (status.getStatus() == State.RUNNING) {
+            fail("The job hasn't finished on time");
+        }
+        response = webResource.path("jobs").post(ClientResponse.class, f);
+        assertEquals(HttpServletResponse.SC_CREATED, response.getStatus());
+        jobURI = response.getLocation();
+        response.close();
+
+        for (int i = 0; i < MAX_JOB_TIME_S; i++) {
+            System.out.print(".");
+            status = webResource.uri(jobURI).get(JobStatus.class);
+            if (status.getStatus() == State.DONE) {
+                System.out.println();
+                break;
+            }
+            Thread.sleep(1000);
+        }
+        System.out.println(webResource.uri(jobURI).get(String.class));
+        if (status.getStatus() == State.RUNNING) {
+            fail("The 2nd job hasn't finished on time");
+        }
+        assertNotNull(status.getAdded());
+        // this workflow has 3 inner annotations, plus roevo & wfdesc & link, plus the workflow itself, plus 16 folders = 22
+        Assert.assertEquals(23, status.getAdded().size());
     }
 }
