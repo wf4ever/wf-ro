@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.purl.wf4ever.wf2ro.rest;
+package org.purl.wf4ever.wf2ro.exceptions;
 
 import java.util.UUID;
 

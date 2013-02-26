@@ -22,6 +22,9 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 
+import org.purl.wf4ever.wf2ro.exceptions.BadRequestException;
+import org.purl.wf4ever.wf2ro.exceptions.CancelledException;
+import org.purl.wf4ever.wf2ro.exceptions.NotFoundException;
 import org.purl.wf4ever.wf2ro.rest.Job.State;
 
 import com.sun.jersey.multipart.FormDataParam;
@@ -75,12 +78,14 @@ public class RestApi implements JobsContainer {
      * @param token
      *            RODL access token
      * @return 201 Created
+     * @throws BadRequestException
+     *             the incoming parameters are incorrect
      */
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     public Response createJobMultipartForm(@FormDataParam("resource") URI resourceURI,
-            @FormDataParam("format") String format, @FormDataParam("ro") URI roURI,
-            @FormDataParam("token") String token) {
+            @FormDataParam("format") String format, @FormDataParam("ro") URI roURI, @FormDataParam("token") String token)
+            throws BadRequestException {
         return createJob(resourceURI, format, roURI, token);
     }
 
@@ -97,11 +102,14 @@ public class RestApi implements JobsContainer {
      * @param token
      *            RODL access token
      * @return 201 Created
+     * @throws BadRequestException
+     *             the incoming parameters are incorrect
      */
     @POST
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public Response createJobForm(@FormParam("resource") URI resourceURI, @FormParam("format") String formatURI,
-            @FormParam("ro") URI roURI, @FormParam("token") String token) {
+            @FormParam("ro") URI roURI, @FormParam("token") String token)
+            throws BadRequestException {
         return createJob(resourceURI, formatURI, roURI, token);
     }
 
@@ -113,10 +121,13 @@ public class RestApi implements JobsContainer {
      *            JSON with config params
      * 
      * @return 201 Created
+     * @throws BadRequestException
+     *             the incoming parameters are incorrect
      */
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response createJobJson(JobConfig config) {
+    public Response createJobJson(JobConfig config)
+            throws BadRequestException {
         return createJob(config.getResource(), config.getFormat(), config.getRo(), config.getToken());
     }
 
@@ -133,10 +144,22 @@ public class RestApi implements JobsContainer {
      * @param token
      *            RODL access token
      * @return 201 Created
+     * @throws BadRequestException
+     *             the incoming parameters are incorrect
      */
-    private Response createJob(URI resourceURI, String format, URI roURI, String token) {
+    private Response createJob(URI resourceURI, String format, URI roURI, String token)
+            throws BadRequestException {
         if (jobs.size() >= MAX_JOBS) {
             return Response.status(Status.SERVICE_UNAVAILABLE).build();
+        }
+        if (resourceURI == null) {
+            throw new BadRequestException("Resource URI cannot be null");
+        }
+        if (format == null) {
+            throw new BadRequestException("Format cannot be null");
+        }
+        if (roURI == null) {
+            throw new BadRequestException("Research Object URI cannot be null");
         }
         UUID jobUUID = UUID.randomUUID();
         URI jobURI = uriInfo.getAbsolutePathBuilder().path(jobUUID.toString()).build();

@@ -1,9 +1,11 @@
-package org.purl.wf4ever.wf2ro.rest;
+package org.purl.wf4ever.wf2ro.exceptions.mappers;
 
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
+
+import org.purl.wf4ever.wf2ro.exceptions.NotFoundException;
 
 /**
  * Maps <code>NotFoundException</code> to <code>404 (Not Found)</code> HTTP response.

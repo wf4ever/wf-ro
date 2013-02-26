@@ -17,7 +17,7 @@
 		</init-param>
 		<init-param>
 			<param-name>com.sun.jersey.config.property.packages</param-name>
-			<param-value>org.purl.wf4ever.wf2ro.rest</param-value>
+			<param-value>org.purl.wf4ever.wf2ro</param-value>
 		</init-param>
 	</filter>
 
