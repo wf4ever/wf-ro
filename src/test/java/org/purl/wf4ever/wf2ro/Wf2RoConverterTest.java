@@ -5,7 +5,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.net.URI;
@@ -20,7 +19,6 @@ import org.purl.wf4ever.wf2ro.MockupWf2ROConverter.FolderEntry;
 import pl.psnc.dl.wf4ever.vocabulary.ORE;
 import pl.psnc.dl.wf4ever.vocabulary.RO;
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
-import uk.org.taverna.scufl2.api.io.ReaderException;
 import uk.org.taverna.scufl2.api.io.WorkflowBundleIO;
 
 import com.google.common.collect.Multimap;
@@ -62,14 +60,12 @@ public class Wf2RoConverterTest {
     /**
      * A simple test of the conversion logic.
      * 
-     * @throws ReaderException
-     *             when the workflow couldn't be read
-     * @throws IOException
-     *             when the workflow couldn't be read
+     * @throws Exception
+     *             any kind of conversion exception
      */
     @Test
     public void testConvert()
-            throws ReaderException, IOException {
+            throws Exception {
         WorkflowBundleIO io = new WorkflowBundleIO();
         InputStream helloWorld = getClass().getClassLoader().getResourceAsStream(HELLO_ANYONE_T2FLOW);
         WorkflowBundle wfbundle = io.readBundle(helloWorld, null);

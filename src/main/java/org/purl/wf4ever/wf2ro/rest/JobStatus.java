@@ -31,6 +31,9 @@ public class JobStatus {
     /** resources already uploaded. */
     private List<URI> added;
 
+    /** reason for the status, i.e. exception message. */
+    private String reason;
+
 
     /**
      * Default empty constructor.
@@ -53,14 +56,17 @@ public class JobStatus {
      *            job state
      * @param added
      *            resources added
+     * @param reason
+     *            reason for the status, i.e. exception message
      */
-    public JobStatus(URI resource, String format, URI ro, State state, List<URI> added) {
+    public JobStatus(URI resource, String format, URI ro, State state, List<URI> added, String reason) {
         super();
         this.resource = resource;
         this.format = format;
         this.ro = ro;
         this.status = state;
         this.added = added;
+        this.reason = reason;
     }
 
 
@@ -111,6 +117,16 @@ public class JobStatus {
 
     public void setAdded(List<URI> added) {
         this.added = added;
+    }
+
+
+    public String getReason() {
+        return reason;
+    }
+
+
+    public void setReason(String reason) {
+        this.reason = reason;
     }
 
 }

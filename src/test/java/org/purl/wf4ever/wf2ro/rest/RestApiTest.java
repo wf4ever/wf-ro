@@ -331,4 +331,49 @@ public class RestApiTest extends JerseyTest {
         // this workflow has 3 inner annotations, plus roevo & wfdesc & link, plus the workflow itself, plus 16 folders = 22
         Assert.assertEquals(23, status.getAdded().size());
     }
+
+
+    /**
+     * Create a job posting a JSON and for it to finish.
+     * 
+     * @throws InterruptedException
+     *             interrupted while waiting for a job to finish
+     */
+    @Test
+    public void testCreateAndCatchException()
+            throws InterruptedException {
+        WebResource webResource;
+        if (resource().getURI().getHost().equals("localhost")) {
+            webResource = resource();
+        } else {
+            webResource = resource().path("wf-ro/");
+        }
+
+        JobConfig config = new JobConfig(WF_URI, TAVERNA_FORMAT, URI.create("http://foobar"), TOKEN);
+
+        ClientResponse response = webResource.path("jobs").type(MediaType.APPLICATION_JSON_TYPE)
+                .post(ClientResponse.class, config);
+        assertEquals(HttpServletResponse.SC_CREATED, response.getStatus());
+        URI jobURI = response.getLocation();
+        response.close();
+
+        JobStatus status = null;
+
+        for (int i = 0; i < MAX_JOB_TIME_S; i++) {
+            System.out.print(".");
+            status = webResource.uri(jobURI).get(JobStatus.class);
+            if (status.getStatus() != State.RUNNING) {
+                System.out.println();
+                break;
+            }
+            Thread.sleep(1000);
+        }
+        System.out.println(webResource.uri(jobURI).get(String.class));
+        if (status.getStatus() == State.RUNNING) {
+            fail("The job hasn't finished on time");
+        }
+        Assert.assertEquals(State.RUNTIME_ERROR, status.getStatus());
+        Assert.assertNotNull(status.getReason());
+    }
+
 }

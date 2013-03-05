@@ -113,8 +113,12 @@ public abstract class Wf2ROConverter {
      * 
      * This method can be called only once per class instance. Subsequent calls will result in IllegalStateException
      * being thrown.
+     * 
+     * @throws Exception
+     *             any kind of conversion problem
      */
-    public void convert() {
+    public void convert()
+            throws Exception {
         synchronized (running) {
             if (running) {
                 throw new IllegalStateException(
@@ -124,13 +128,7 @@ public abstract class Wf2ROConverter {
         }
         UUID wfUUID = getWorkflowBundleUUID(wfbundle);
         String wfname = wfbundle.getMainWorkflow().getName() + ".wfbundle";
-        URI roURI = null;
-        try {
-            roURI = createResearchObject(wfUUID);
-        } catch (ROSRSException e) {
-            LOG.error("Can't create RO", e);
-            return;
-        }
+        URI roURI = createResearchObject(wfUUID);
         try {
             createFolders(roURI, resourcesAdded, foldersPropertiesFilename);
             if (workflowFolder != null) {
@@ -141,17 +139,12 @@ public abstract class Wf2ROConverter {
             LOG.error("Can't create folders", e);
         }
         URI wfbundleUri;
-        try {
-            String wfpath = roURI.relativize(workflowBundleFolder.resolve(wfname)).getPath();
-            wfbundleUri = addWorkflowBundle(roURI, wfbundle, wfpath);
-            if (workflowBundleFolder != null) {
-                addFolderEntry(workflowBundleFolder, wfbundleUri, wfname);
-            }
-            resourcesAdded.add(wfbundleUri);
-        } catch (IOException | ROSRSException | WriterException e) {
-            LOG.error("Can't upload workflow bundle", e);
-            return;
+        String wfpath = roURI.relativize(workflowBundleFolder.resolve(wfname)).getPath();
+        wfbundleUri = addWorkflowBundle(roURI, wfbundle, wfpath);
+        if (workflowBundleFolder != null) {
+            addFolderEntry(workflowBundleFolder, wfbundleUri, wfname);
         }
+        resourcesAdded.add(wfbundleUri);
         try {
             extractAnnotations(roURI, wfbundleUri, wfbundle, resourcesAdded);
         } catch (IOException | ROSRSException e) {

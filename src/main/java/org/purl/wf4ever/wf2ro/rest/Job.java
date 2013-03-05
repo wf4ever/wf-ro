@@ -1,10 +1,13 @@
 package org.purl.wf4ever.wf2ro.rest;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.URI;
 import java.util.UUID;
 
 import org.apache.log4j.Logger;
+import org.purl.wf4ever.rosrs.client.common.ROSRSException;
 import org.purl.wf4ever.wf2ro.RodlConverter;
 
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
@@ -62,6 +65,12 @@ public class Job extends Thread {
     /** RO URI. */
     private URI ro;
 
+
+    public String getReason() {
+        return reason;
+    }
+
+
     /** RODL access token. */
     private String token;
 
@@ -70,6 +79,9 @@ public class Job extends Thread {
 
     /** The converter. */
     private RodlConverter converter;
+
+    /** Reason for the state, i.e. exception message. */
+    private String reason;
 
 
     /**
@@ -113,11 +125,19 @@ public class Job extends Thread {
             converter.convert();
             state = State.DONE;
         } catch (ReaderException | IOException e) {
-            LOG.error("Can't download the resource", e);
+            LOG.error("Can't download the workflow", e);
             state = State.INVALID_RESOURCE;
+            reason = "Can't download the workflow: " + e.getMessage();
+        } catch (ROSRSException e) {
+            LOG.error("ROSRS exception", e);
+            state = State.RUNTIME_ERROR;
+            reason = "ROSRS exception: " + e.getMessage();
         } catch (Throwable e) {
             LOG.error("Unexpected exception during conversion", e);
             state = State.RUNTIME_ERROR;
+            StringWriter errors = new StringWriter();
+            e.printStackTrace(new PrintWriter(errors));
+            reason = errors.toString();
         }
 
         container.onJobDone(this);
@@ -135,7 +155,8 @@ public class Job extends Thread {
 
 
     public JobStatus getJobStatus() {
-        return new JobStatus(resource, format, ro, state, converter != null ? converter.getResourcesAdded() : null);
+        return new JobStatus(resource, format, ro, state, converter != null ? converter.getResourcesAdded() : null,
+                reason);
     }
 
 
