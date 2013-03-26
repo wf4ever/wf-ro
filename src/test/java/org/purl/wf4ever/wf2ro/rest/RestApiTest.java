@@ -63,7 +63,7 @@ public class RestApiTest extends JerseyTest {
     private static URI ro2Uri;
 
     /** RODL access token, currently assigned to Wf4Ever Test User. */
-    private static final String TOKEN = "32801fc0-1df1-4e34-b";
+    private static final String TOKEN = "36d5e085-a672-4e21-8031-9e590dc703d6";
 
     /**
      * Maximum time that the test waits for a job to finish. After that the test fails.
