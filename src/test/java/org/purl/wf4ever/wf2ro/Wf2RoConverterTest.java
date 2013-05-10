@@ -52,10 +52,6 @@ public class Wf2RoConverterTest {
     /** Workflow name, in src/test/resources. */
     private static final String HELLO_ANYONE_T2FLOW = "helloanyone.t2flow";
 
-    /** Workflow name, in src/test/resources. */
-    @SuppressWarnings("unused")
-    private static final String WF2470_T2FLOW = "workflow2470.t2flow";
-
 
     /**
      * A simple test of the conversion logic.

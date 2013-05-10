@@ -1,5 +1,13 @@
 package org.purl.wf4ever.wf2ro.rest;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.matching;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -13,18 +21,20 @@ import java.util.UUID;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 
-import org.junit.After;
+import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.purl.wf4ever.rosrs.client.ROSRService;
 import org.purl.wf4ever.rosrs.client.exception.ROSRSException;
 import org.purl.wf4ever.wf2ro.IntegrationTest;
 import org.purl.wf4ever.wf2ro.rest.Job.State;
 
+import pl.psnc.dl.wf4ever.vocabulary.ORE;
 import uk.org.taverna.scufl2.translator.t2flow.T2FlowReader;
 
-import com.sun.jersey.api.client.Client;
+import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.representation.Form;
@@ -43,40 +53,163 @@ import com.sun.jersey.test.framework.JerseyTest;
 @Category(IntegrationTest.class)
 public class RestApiTest extends JerseyTest {
 
-    /** an example workflow from myExperiment. */
-    private static final URI WF_URI = URI.create("http://www.myexperiment.org/workflows/2648/download?version=1");
+    /** A test HTTP mock server. */
+    @Rule
+    public static final WireMockRule WIREMOCK_RULE = new WireMockRule(8089); // No-args constructor defaults to port 8080
+
+    /** an example workflow from myExperiment: http://www.myexperiment.org/workflows/2648/download?version=1. */
+    private static final URI WF_URI = URI.create("http://localhost:8089/workflow.t2flow");
 
     /** workflow format MIME type. */
     private static final String TAVERNA_FORMAT = T2FlowReader.APPLICATION_VND_TAVERNA_T2FLOW_XML;
 
     /** RODL URI. */
-    private static final URI RODL_URI = URI.create("http://sandbox.wf4ever-project.org/rodl/");
+    private static final URI ROSRS_URI = URI.create("http://localhost:8089/rodl/ROs/");
 
-    /** RO URI, with a random UUID as ro id. */
-    private static final URI RO_URI = RODL_URI.resolve("ROs/" + UUID.randomUUID().toString() + "/");
+    /** RO URI that already exists. */
+    private static final URI RO_URI_EXISTING = URI.create("http://localhost:8089/rodl/ROs/1/");
 
-    /** RO URI, with a random UUID as ro id. */
-    private static URI ro2Uri;
+    /** RO URI that can always be created. */
+    private static final URI RO_URI_NEW = URI.create("http://localhost:8089/rodl/ROs/2/");
 
-    /** RODL access token, currently assigned to Wf4Ever Test User. */
-    private static final String TOKEN = "36d5e085-a672-4e21-8031-9e590dc703d6";
+    private static final String TOKEN = "foo";
 
     /**
      * Maximum time that the test waits for a job to finish. After that the test fails.
      */
-    private static final long MAX_JOB_TIME_S = 480;
+    private static final long MAX_JOB_TIME_S = 10;
 
 
-    @After
+    @Before
     @Override
-    public void tearDown()
+    public void setUp()
             throws Exception {
-        ROSRService rosrs = new ROSRService(RODL_URI, TOKEN);
-        rosrs.deleteResearchObject(RO_URI);
-        if (ro2Uri != null) {
-            rosrs.deleteResearchObject(ro2Uri);
-        }
-        super.tearDown();
+        super.setUp();
+        setUpGetWorkflow();
+        setUpCreateRo();
+        setUpCreateFolder();
+        setUpCreateFolderEntry();
+        setUpCreateAnnotation();
+        setUpCreateResource();
+    }
+
+
+    /**
+     * Configure WireMock to handle folder creation.
+     * 
+     * @throws IOException
+     *             if the test resources are not available
+     */
+    protected void setUpGetWorkflow()
+            throws IOException {
+        InputStream wf = getClass().getClassLoader().getResourceAsStream("hello_world_190236.t2flow");
+        stubFor(get(urlEqualTo("/workflow.t2flow")).willReturn(
+            aResponse().withStatus(200).withBody(IOUtils.toByteArray(wf))));
+    }
+
+
+    /**
+     * Configure WireMock to return resource maps.
+     * 
+     * @throws IOException
+     *             if the test resources are not available
+     */
+    protected void setUpCreateRo()
+            throws IOException {
+        stubFor(get(urlEqualTo("/rodl/ROs/")).willReturn(
+            aResponse().withStatus(200).withHeader("Content-Type", "text/uri-list").withBody("" + RO_URI_EXISTING)));
+        stubFor(post(urlEqualTo("/rodl/ROs/"))
+                .withHeader("Slug", equalTo("2"))
+                .withHeader("Accept", equalTo("application/rdf+xml"))
+                .willReturn(
+                    aResponse().withStatus(201).withHeader("Content-Type", "application/rdf+xml")
+                            .withHeader("Location", RO_URI_NEW.toString())));
+    }
+
+
+    /**
+     * Configure WireMock to handle folder creation.
+     * 
+     * @throws IOException
+     *             if the test resources are not available
+     */
+    protected void setUpCreateFolder()
+            throws IOException {
+        InputStream response = getClass().getClassLoader().getResourceAsStream("rodl/folder-created-response.rdf");
+        stubFor(post(urlMatching("/.+")).withHeader("Content-Type", equalTo("application/vnd.wf4ever.folder"))
+                .willReturn(
+                    aResponse()
+                            .withStatus(201)
+                            .withHeader("Content-Type", "application/rdf+xml")
+                            .withHeader("Location", "foo")
+                            .withHeader(
+                                "Link",
+                                "<http://localhost:8089/" + UUID.randomUUID() + ">; rel=\"" + ORE.proxyFor.toString()
+                                        + "\"")
+                            .withHeader("Link", "<" + "foo" + ">; rel=\"" + ORE.isDescribedBy.toString() + "\"")
+                            .withBody(IOUtils.toByteArray(response))));
+    }
+
+
+    /**
+     * Configure WireMock to handle folder entries creation.
+     * 
+     * @throws IOException
+     *             if the test resources are not available
+     */
+    protected void setUpCreateFolderEntry()
+            throws IOException {
+        stubFor(post(urlMatching("/.+")).withHeader("Content-Type", equalTo("application/vnd.wf4ever.folderentry"))
+                .willReturn(
+                    aResponse()
+                            .withStatus(201)
+                            .withHeader("Content-Type", "application/rdf+xml")
+                            .withHeader("Location", "foo")
+                            .withHeader(
+                                "Link",
+                                "<http://localhost:8089/" + UUID.randomUUID() + ">; rel=\"" + ORE.proxyFor.toString()
+                                        + "\"")
+                            .withHeader("Link", "<" + "foo" + ">; rel=\"" + ORE.isDescribedBy.toString() + "\"")
+                            .withBody("")));
+    }
+
+
+    /**
+     * Configure WireMock to create and delete annotations.
+     * 
+     * @throws IOException
+     *             if the test resources are not available
+     */
+    protected void setUpCreateAnnotation()
+            throws IOException {
+        InputStream response = getClass().getClassLoader().getResourceAsStream("rodl/folder-created-response.rdf");
+        stubFor(post(urlEqualTo("/rodl/ROs/[12]/")).withHeader("Link", matching(".+annotatesResource.+")).willReturn(
+            aResponse()
+                    .withStatus(201)
+                    .withHeader("Location", "foo".toString())
+                    .withHeader("Link",
+                        "<http://localhost:8089/" + UUID.randomUUID() + ">; rel=\"" + ORE.proxyFor.toString() + "\"")
+                    .withBody(IOUtils.toByteArray(response))));
+    }
+
+
+    /**
+     * Configure WireMock to handle creating resources.
+     * 
+     * @throws IOException
+     *             if the test resources are not available
+     */
+    protected void setUpCreateResource()
+            throws IOException {
+        InputStream response = getClass().getClassLoader().getResourceAsStream("rodl/resource-created-response.rdf");
+        stubFor(post(urlMatching("/.+")).willReturn(
+            aResponse()
+                    .withStatus(201)
+                    .withHeader("Content-Type", "text/plain")
+                    .withHeader("Location", "foo")
+                    .withHeader("Link",
+                        "<http://localhost:8089/" + UUID.randomUUID() + ">; rel=\"" + ORE.proxyFor.toString() + "\"")
+                    .withBody(IOUtils.toByteArray(response))));
     }
 
 
@@ -107,10 +240,8 @@ public class RestApiTest extends JerseyTest {
         Form f = new Form();
         f.add("resource", WF_URI);
         f.add("format", TAVERNA_FORMAT);
-        f.add("ro", RO_URI);
+        f.add("ro", RO_URI_NEW);
         f.add("token", TOKEN);
-
-        //        JobConfig config = new JobConfig(WF_URI, TAVERNA_FORMAT, RO2_URI, TOKEN.getToken());
 
         ClientResponse response = webResource.path("jobs").post(ClientResponse.class, f);
         assertEquals(HttpServletResponse.SC_CREATED, response.getStatus());
@@ -126,7 +257,7 @@ public class RestApiTest extends JerseyTest {
                 status.getStatus() == State.RUNNING || status.getStatus() == State.DONE);
             assertEquals(WF_URI, status.getResource());
             assertEquals(TAVERNA_FORMAT, status.getFormat());
-            assertEquals(RO_URI, status.getRo());
+            assertEquals(RO_URI_NEW, status.getRo());
             if (status.getStatus() == State.DONE) {
                 System.out.println();
                 break;
@@ -159,7 +290,7 @@ public class RestApiTest extends JerseyTest {
             webResource = resource().path("wf-ro/");
         }
 
-        JobConfig config = new JobConfig(WF_URI, TAVERNA_FORMAT, RO_URI, TOKEN);
+        JobConfig config = new JobConfig(WF_URI, TAVERNA_FORMAT, RO_URI_NEW, TOKEN);
 
         ClientResponse response = webResource.path("jobs").type(MediaType.APPLICATION_JSON_TYPE)
                 .post(ClientResponse.class, config);
@@ -176,7 +307,7 @@ public class RestApiTest extends JerseyTest {
                 status.getStatus() == State.RUNNING || status.getStatus() == State.DONE);
             assertEquals(WF_URI, status.getResource());
             assertEquals(TAVERNA_FORMAT, status.getFormat());
-            assertEquals(RO_URI, status.getRo());
+            assertEquals(RO_URI_NEW, status.getRo());
             if (status.getStatus() == State.DONE) {
                 System.out.println();
                 break;
@@ -213,19 +344,10 @@ public class RestApiTest extends JerseyTest {
             webResource = resource().path("wf-ro/");
         }
 
-        ROSRService rosrs = new ROSRService(RODL_URI, TOKEN);
-        ro2Uri = rosrs.createResearchObject(UUID.randomUUID().toString()).getLocation();
-        Client client = new Client();
-        URI wfUri = null;
-        try (InputStream wf = client.resource(WF_URI.toString()).get(InputStream.class)) {
-            wfUri = rosrs.aggregateInternalResource(ro2Uri, "http://example.org/workflow.t2flow", wf, TAVERNA_FORMAT)
-                    .getLocation();
-        }
-
         Form f = new Form();
-        f.add("resource", wfUri);
+        f.add("resource", WF_URI);
         f.add("format", TAVERNA_FORMAT);
-        f.add("ro", ro2Uri);
+        f.add("ro", RO_URI_EXISTING);
         f.add("token", TOKEN);
 
         ClientResponse response = webResource.path("jobs").post(ClientResponse.class, f);
@@ -240,9 +362,9 @@ public class RestApiTest extends JerseyTest {
             status = webResource.uri(jobURI).get(JobStatus.class);
             assertTrue("Status is: " + status.getStatus().toString(),
                 status.getStatus() == State.RUNNING || status.getStatus() == State.DONE);
-            assertEquals(wfUri, status.getResource());
+            assertEquals(WF_URI, status.getResource());
             assertEquals(TAVERNA_FORMAT, status.getFormat());
-            assertEquals(ro2Uri, status.getRo());
+            assertEquals(RO_URI_EXISTING, status.getRo());
             if (status.getStatus() == State.DONE) {
                 System.out.println();
                 break;
@@ -282,7 +404,7 @@ public class RestApiTest extends JerseyTest {
         Form f = new Form();
         f.add("resource", WF_URI);
         f.add("format", TAVERNA_FORMAT);
-        f.add("ro", RO_URI);
+        f.add("ro", RO_URI_NEW);
         f.add("token", TOKEN);
 
         ClientResponse response = webResource.path("jobs").post(ClientResponse.class, f);

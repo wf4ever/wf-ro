@@ -59,7 +59,7 @@ public class RodlConverter extends Wf2ROConverter {
      */
     public RodlConverter(WorkflowBundle wfbundle, URI wfUri, URI roURI, String rodlToken) {
         super(wfbundle, wfUri, "folders.properties");
-        URI rodlURI = roURI.resolve("../.."); // zrobic z tego metode i stala
+        URI rodlURI = roURI.resolve(".."); // zrobic z tego metode i stala
         this.rosrs = new ROSRService(rodlURI, rodlToken);
         this.roURI = roURI;
     }
@@ -68,6 +68,7 @@ public class RodlConverter extends Wf2ROConverter {
     @Override
     protected URI createResearchObject(UUID wfUUID)
             throws ROSRSException {
+        //TODO do a HEAD request and check for 404 instead of this magic
         String[] segments = roURI.getPath().split("/"); // stala?
         String roId = segments[segments.length - 1]; // URI utils
         try {

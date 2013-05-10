@@ -1,0 +1,15 @@
+<rdf:RDF
+   xmlns:ro="http://purl.org/wf4ever/ro#"
+   xmlns:dct="http://purl.org/dc/terms/"
+   xmlns:ore="http://www.openarchives.org/ore/terms/"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" >
+ <rdf:Description rdf:about="http://localhost:8089/ro1/res1.txt">
+    <dct:created rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2012-12-11T12:06:53.551Z</dct:created>
+    <dct:creator rdf:resource="http://test.myopenid.com"/>
+ </rdf:Description>
+ <rdf:Description rdf:about="http://localhost:8089/resproxy">
+   <rdf:type rdf:resource="http://www.openarchives.org/ore/terms/Proxy"/>
+   <ore:proxyIn rdf:resource="http://example.org/ROs/1/"/>
+   <ore:proxyFor rdf:resource="http://localhost:8089/ro1/res1.txt" />
+ </rdf:Description>
+</rdf:RDF>
