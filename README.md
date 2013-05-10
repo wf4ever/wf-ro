@@ -1,3 +1,5 @@
+[![Build Status](https://buildhive.cloudbees.com/job/wf4ever/job/wf-ro/badge/icon)](https://buildhive.cloudbees.com/job/wf4ever/job/wf-ro/)
+
 wf-ro
 =========
 
