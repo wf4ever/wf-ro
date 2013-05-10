@@ -1,6 +1,3 @@
-/**
- * 
- */
 package org.purl.wf4ever.wf2ro.rest;
 
 import static org.junit.Assert.assertEquals;
@@ -16,12 +13,13 @@ import java.util.UUID;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 
-import junit.framework.Assert;
-
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.purl.wf4ever.rosrs.client.ROSRService;
 import org.purl.wf4ever.rosrs.client.exception.ROSRSException;
+import org.purl.wf4ever.wf2ro.IntegrationTest;
 import org.purl.wf4ever.wf2ro.rest.Job.State;
 
 import uk.org.taverna.scufl2.translator.t2flow.T2FlowReader;
@@ -39,12 +37,10 @@ import com.sun.jersey.test.framework.JerseyTest;
  * This test can only be run as a maven run (goal=test) and requires run parameters, as described in
  * http://jersey.java.net/nonav/documentation/latest/test-framework.html
  * 
- * To run the test using the embedded Grizzly 2 server, launched at run time, set: jersey.test.containerFactory =
- * com.sun.jersey.test.framework.spi.container.grizzly2.GrizzlyTestContainerFactory jersey.test.port = 8080 (or other)
- * 
  * @author piotrekhol
  * 
  */
+@Category(IntegrationTest.class)
 public class RestApiTest extends JerseyTest {
 
     /** an example workflow from myExperiment. */
@@ -334,7 +330,7 @@ public class RestApiTest extends JerseyTest {
 
 
     /**
-     * Create a job posting a JSON and for it to finish.
+     * Create a job posting a JSON and wait for it to finish.
      * 
      * @throws InterruptedException
      *             interrupted while waiting for a job to finish
