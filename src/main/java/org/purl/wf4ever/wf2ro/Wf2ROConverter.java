@@ -11,12 +11,12 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.ws.rs.core.UriBuilder;
@@ -25,7 +25,7 @@ import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.log4j.Logger;
 import org.openrdf.rio.RDFFormat;
-import org.purl.wf4ever.rosrs.client.common.ROSRSException;
+import org.purl.wf4ever.rosrs.client.exception.ROSRSException;
 import org.purl.wf4ever.wfdesc.scufl2.ROEvoSerializer;
 
 import uk.org.taverna.scufl2.api.annotation.Annotation;
@@ -369,7 +369,7 @@ public abstract class Wf2ROConverter {
                 try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
                     annBody.write(out);
                     try (ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray())) {
-                        resourcesAdded2.add(uploadAnnotation(roURI, "wf", Arrays.asList(target), in,
+                        resourcesAdded2.add(uploadAnnotation(roURI, "wf", Collections.singleton(target), in,
                             "application/rdf+xml"));
                     }
                 }
@@ -417,7 +417,7 @@ public abstract class Wf2ROConverter {
                 }
             }
         }).start();
-        return uploadAnnotation(roURI, "roevo", Arrays.asList(rodlWfURI), in, TEXT_TURTLE);
+        return uploadAnnotation(roURI, "roevo", Collections.singleton(rodlWfURI), in, TEXT_TURTLE);
     }
 
 
@@ -456,7 +456,7 @@ public abstract class Wf2ROConverter {
                 }
             }
         }).start();
-        return uploadAnnotation(roURI, "wfdesc", Arrays.asList(rodlWfURI), in, TEXT_TURTLE);
+        return uploadAnnotation(roURI, "wfdesc", Collections.singleton(rodlWfURI), in, TEXT_TURTLE);
     }
 
 
@@ -491,7 +491,7 @@ public abstract class Wf2ROConverter {
         model.write(out, "TURTLE");
         ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
 
-        return uploadAnnotation(roURI, "link", Arrays.asList(wfUri), in, RDFFormat.TURTLE.getDefaultMIMEType());
+        return uploadAnnotation(roURI, "link", Collections.singleton(wfUri), in, RDFFormat.TURTLE.getDefaultMIMEType());
     }
 
 
@@ -607,7 +607,7 @@ public abstract class Wf2ROConverter {
      *             when there are problems with uploading the resource
      * @throws IOException
      */
-    protected abstract URI uploadAnnotation(URI researchObject, String name, List<URI> targets, InputStream in,
+    protected abstract URI uploadAnnotation(URI researchObject, String name, Set<URI> targets, InputStream in,
             String contentType)
             throws ROSRSException;
 

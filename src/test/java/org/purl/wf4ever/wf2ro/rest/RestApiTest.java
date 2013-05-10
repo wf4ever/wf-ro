@@ -20,8 +20,8 @@ import junit.framework.Assert;
 
 import org.junit.After;
 import org.junit.Test;
-import org.purl.wf4ever.rosrs.client.common.ROSRSException;
-import org.purl.wf4ever.rosrs.client.common.ROSRService;
+import org.purl.wf4ever.rosrs.client.ROSRService;
+import org.purl.wf4ever.rosrs.client.exception.ROSRSException;
 import org.purl.wf4ever.wf2ro.rest.Job.State;
 
 import uk.org.taverna.scufl2.translator.t2flow.T2FlowReader;
@@ -222,7 +222,7 @@ public class RestApiTest extends JerseyTest {
         Client client = new Client();
         URI wfUri = null;
         try (InputStream wf = client.resource(WF_URI.toString()).get(InputStream.class)) {
-            wfUri = rosrs.createResource(ro2Uri, "http://example.org/workflow.t2flow", wf, TAVERNA_FORMAT)
+            wfUri = rosrs.aggregateInternalResource(ro2Uri, "http://example.org/workflow.t2flow", wf, TAVERNA_FORMAT)
                     .getLocation();
         }
 

@@ -7,7 +7,7 @@ import java.net.URI;
 import java.util.UUID;
 
 import org.apache.log4j.Logger;
-import org.purl.wf4ever.rosrs.client.common.ROSRSException;
+import org.purl.wf4ever.rosrs.client.exception.ROSRSException;
 import org.purl.wf4ever.wf2ro.RodlConverter;
 
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;

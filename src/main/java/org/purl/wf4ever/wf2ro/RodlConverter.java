@@ -9,15 +9,16 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.ws.rs.core.UriBuilder;
 
 import org.apache.http.HttpStatus;
 import org.apache.log4j.Logger;
-import org.purl.wf4ever.rosrs.client.common.ROSRSException;
-import org.purl.wf4ever.rosrs.client.common.ROSRService;
-import org.purl.wf4ever.rosrs.client.common.Utils;
+import org.purl.wf4ever.rosrs.client.ROSRService;
+import org.purl.wf4ever.rosrs.client.Utils;
+import org.purl.wf4ever.rosrs.client.exception.ROSRSException;
 
 import pl.psnc.dl.wf4ever.vocabulary.ORE;
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
@@ -84,7 +85,7 @@ public class RodlConverter extends Wf2ROConverter {
     @Override
     protected void uploadAggregatedResource(URI researchObject, String path, InputStream in, String contentType)
             throws ROSRSException {
-        rosrs.createResource(researchObject, path, in, contentType);
+        rosrs.aggregateInternalResource(researchObject, path, in, contentType);
     }
 
 
@@ -95,11 +96,10 @@ public class RodlConverter extends Wf2ROConverter {
 
 
     @Override
-    protected URI uploadAnnotation(URI researchObject, String name, List<URI> targets, InputStream in,
-            String contentType)
+    protected URI uploadAnnotation(URI researchObject, String name, Set<URI> targets, InputStream in, String contentType)
             throws ROSRSException {
-        String bodyPath = ROSRService.createAnnotationBodyPath(targets.get(0).resolve(".").relativize(targets.get(0))
-                .toString()
+        String bodyPath = ROSRService.createAnnotationBodyPath(targets.iterator().next().resolve(".")
+                .relativize(targets.iterator().next()).toString()
                 + "-" + name);
         ClientResponse response = rosrs.addAnnotation(researchObject, targets, bodyPath, in, contentType);
         return response.getLocation();
@@ -109,7 +109,7 @@ public class RodlConverter extends Wf2ROConverter {
     @Override
     protected void aggregateResource(URI researchObject, URI resource)
             throws ROSRSException {
-        rosrs.aggregateResource(researchObject, resource);
+        rosrs.aggregateExternalResource(researchObject, resource);
     }
 
 

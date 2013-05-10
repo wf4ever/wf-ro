@@ -10,12 +10,13 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.log4j.Logger;
-import org.purl.wf4ever.rosrs.client.common.ROSRSException;
+import org.purl.wf4ever.rosrs.client.exception.ROSRSException;
 
 import pl.psnc.dl.wf4ever.vocabulary.AO;
 import pl.psnc.dl.wf4ever.vocabulary.ORE;
@@ -218,8 +219,7 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
 
 
     @Override
-    protected URI uploadAnnotation(URI researchObject, String name, List<URI> targets, InputStream in,
-            String contentType) {
+    protected URI uploadAnnotation(URI researchObject, String name, Set<URI> targets, InputStream in, String contentType) {
         annCnt++;
         URI ann = researchObject.resolve(".ro/ann-" + name + "-" + annCnt);
         URI body = researchObject.resolve(".ro/body-" + name + "-" + annCnt);
