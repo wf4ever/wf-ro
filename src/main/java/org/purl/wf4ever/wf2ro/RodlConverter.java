@@ -74,7 +74,7 @@ public class RodlConverter extends Wf2ROConverter {
         try {
             List<URI> userROs = rosrs.getROList(false);
             if (!userROs.contains(roURI)) {
-                rosrs.createResearchObject(roId);
+                return rosrs.createResearchObject(roId).getLocation();
             }
         } catch (URISyntaxException e) {
             throw new RuntimeException(e); // tu tez
