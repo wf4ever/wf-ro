@@ -8,20 +8,16 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.net.URI;
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 import org.junit.Test;
 import org.openrdf.rio.RDFFormat;
-import org.purl.wf4ever.wf2ro.MockupWf2ROConverter.FolderEntry;
 
 import pl.psnc.dl.wf4ever.vocabulary.ORE;
 import pl.psnc.dl.wf4ever.vocabulary.RO;
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
 import uk.org.taverna.scufl2.api.io.WorkflowBundleIO;
 
-import com.google.common.collect.Multimap;
 import com.hp.hpl.jena.ontology.Individual;
 import com.hp.hpl.jena.ontology.OntModel;
 import com.hp.hpl.jena.ontology.OntModelSpec;
@@ -41,7 +37,7 @@ import com.hp.hpl.jena.vocabulary.DCTerms;
 public class Wf2RoConverterTest {
 
     /** workflow bundle URI. */
-    private static final String HELLO_ANYONE_WFBUNDLE = "http://example.org/ROs/ro1/folder1/Hello_Anyone.wfbundle";
+    private static final String HELLO_ANYONE_WFBUNDLE = "http://example.org/ROs/ro1/Hello_Anyone.wfbundle";
 
     /** the link between the workflow bundle and the main workflow. */
     private static final String HAS_WF_DEF = "http://purl.org/wf4ever/wfdesc#hasWorkflowDefinition";
@@ -69,9 +65,7 @@ public class Wf2RoConverterTest {
         MockupWf2ROConverter converter = new MockupWf2ROConverter(wfbundle, URI.create(HELLO_ANYONE_T2FLOW));
         converter.convert();
         //        System.out.println(converter.getResources().keySet());
-        assertEquals(
-            MockupWf2ROConverter.EXPECTED_ANNOTATIONS.size() + 1 + MockupWf2ROConverter.EXPECTED_FOLDERS.size(),
-            converter.getResourcesAdded().size());
+        assertEquals(MockupWf2ROConverter.EXPECTED_ANNOTATIONS.size() + 1, converter.getResourcesAdded().size());
 
         OntModel model = converter.createManifestModel(null);
         Individual ro = model.getIndividual(converter.createResearchObject(null).toString());
@@ -96,20 +90,6 @@ public class Wf2RoConverterTest {
 
         checkHasWorkflowDefinition(converter);
         checkHasWorkflowAnnotations(converter);
-
-        List<URI> folders = converter.getFolders();
-        assertEquals(MockupWf2ROConverter.EXPECTED_FOLDERS.size(), folders.size());
-        for (URI uri : MockupWf2ROConverter.EXPECTED_FOLDERS) {
-            assertTrue(folders.contains(uri));
-        }
-        Multimap<URI, FolderEntry> entries = converter.getEntries();
-        assertEquals(MockupWf2ROConverter.EXPECTED_ENTRIES.size(), entries.size());
-        for (Map.Entry<URI, MockupWf2ROConverter.FolderEntry> e : MockupWf2ROConverter.EXPECTED_ENTRIES.entries()) {
-            FolderEntry expected = e.getValue();
-            Collection<FolderEntry> found = entries.get(e.getKey());
-            assertNotNull(found);
-            assertTrue(found.toString() + " contains " + expected.toString(), found.contains(expected));
-        }
     }
 
 

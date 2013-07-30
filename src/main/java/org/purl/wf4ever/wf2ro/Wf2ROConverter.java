@@ -12,17 +12,10 @@ import java.io.PipedOutputStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 
-import javax.ws.rs.core.UriBuilder;
-
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.log4j.Logger;
 import org.openrdf.rio.RDFFormat;
 import org.purl.wf4ever.rosrs.client.exception.ROSRSException;
@@ -77,15 +70,6 @@ public abstract class Wf2ROConverter {
     /** Used to guarantee that the conversion is run only once. */
     private Boolean running = false;
 
-    /** Filename with folder configuration. */
-    private String foldersPropertiesFilename;
-
-    /** Folder in which the workflow bundle will be stored. */
-    private URI workflowBundleFolder;
-
-    /** Folder in which the original workflow will be stored. */
-    private URI workflowFolder;
-
     /** The original workflow URI. */
     protected URI originalWfUri;
 
@@ -97,13 +81,10 @@ public abstract class Wf2ROConverter {
      *            The t2flow/scufl2 workflow that needs to be converted to an RO.
      * @param wfUri
      *            workflow URI
-     * @param foldersPropertiesFilename
-     *            filename with folder configuration
      */
-    public Wf2ROConverter(WorkflowBundle wfbundle, URI wfUri, String foldersPropertiesFilename) {
+    public Wf2ROConverter(WorkflowBundle wfbundle, URI wfUri) {
         this.wfbundle = wfbundle;
         this.originalWfUri = wfUri;
-        this.foldersPropertiesFilename = foldersPropertiesFilename;
     }
 
 
@@ -129,21 +110,7 @@ public abstract class Wf2ROConverter {
         UUID wfUUID = getWorkflowBundleUUID(wfbundle);
         String wfname = wfbundle.getMainWorkflow().getName() + ".wfbundle";
         URI roURI = createResearchObject(wfUUID);
-        try {
-            createFolders(roURI, resourcesAdded, foldersPropertiesFilename);
-            if (workflowFolder != null) {
-                aggregateResource(roURI, originalWfUri);
-                addFolderEntry(workflowFolder, originalWfUri, null);
-            }
-        } catch (IOException | ROSRSException | ConfigurationException e) {
-            LOG.error("Can't create folders", e);
-        }
-        URI wfbundleUri;
-        String wfpath = roURI.relativize(workflowBundleFolder.resolve(wfname)).getPath();
-        wfbundleUri = addWorkflowBundle(roURI, wfbundle, wfpath);
-        if (workflowBundleFolder != null) {
-            addFolderEntry(workflowBundleFolder, wfbundleUri, wfname);
-        }
+        URI wfbundleUri = addWorkflowBundle(roURI, wfbundle, wfname);
         resourcesAdded.add(wfbundleUri);
         try {
             extractAnnotations(roURI, wfbundleUri, wfbundle, resourcesAdded);
@@ -171,107 +138,6 @@ public abstract class Wf2ROConverter {
         }
 
     }
-
-
-    /**
-     * Read a folder structure from the properties file and create it in the RO.
-     * 
-     * @param roURI
-     *            RO URI
-     * @param resourcesAdded2
-     *            list to which add created folders
-     * @param foldersPropertiesFilename
-     *            filename of properties file
-     * @throws ConfigurationException
-     *             could not read the properties file
-     * @throws IOException
-     *             ?
-     * @throws ROSRSException
-     *             error communicating with ROSRS
-     */
-    private void createFolders(URI roURI, List<URI> resourcesAdded2, String foldersPropertiesFilename)
-            throws ConfigurationException, IOException, ROSRSException {
-        PropertiesConfiguration props = new PropertiesConfiguration(foldersPropertiesFilename);
-        List<Object> folders = props.getList("folder");
-        if (folders == null) {
-            return;
-        }
-        Map<String, URI> folderURIs = new HashMap<>();
-        for (Object o : folders) {
-            String path = o.toString();
-            URI folder = createFolder(roURI, path);
-            resourcesAdded2.add(folder);
-            folderURIs.put(path, folder);
-        }
-        for (Entry<String, URI> e : folderURIs.entrySet()) {
-            String folderPath = e.getKey();
-            URI folderURI = e.getValue();
-            List<Object> entries = props.getList("entries." + folderPath);
-            if (entries == null) {
-                continue;
-            }
-            for (Object o : entries) {
-                String proxyForPath = o.toString();
-                URI proxyFor;
-                try {
-                    proxyFor = roURI.resolve(proxyForPath);
-                } catch (IllegalArgumentException ex) {
-                    LOG.debug(proxyForPath + " is not a valid URI");
-                    proxyFor = UriBuilder.fromUri(roURI).path(proxyForPath).build();
-                }
-                String name = props.getString("name." + proxyForPath);
-                addFolderEntry(folderURI, proxyFor, name);
-            }
-        }
-        String wfbundleFolder = props.getString("folder.wfbundle");
-        if (wfbundleFolder == null || !folderURIs.containsKey(wfbundleFolder)) {
-            throw new ConfigurationException("Incorrect workflow bundle folder: " + wfbundleFolder);
-        } else {
-            workflowBundleFolder = folderURIs.get(wfbundleFolder);
-        }
-        String wfFolder = props.getString("folder.wf");
-        if (wfFolder == null || !folderURIs.containsKey(wfFolder)) {
-            throw new ConfigurationException("Incorrect workflow  folder: " + wfFolder);
-        } else {
-            workflowFolder = folderURIs.get(wfFolder);
-        }
-    }
-
-
-    /**
-     * Create a folder in the RO.
-     * 
-     * @param roURI
-     *            RO URI
-     * @param path
-     *            folder path
-     * @return folder URI
-     * @throws IOException
-     *             ?
-     * @throws ROSRSException
-     *             incorrect response from ROSRS
-     */
-    protected abstract URI createFolder(URI roURI, String path)
-            throws IOException, ROSRSException;
-
-
-    /**
-     * Add a resource to the folder.
-     * 
-     * @param folder
-     *            folder
-     * @param proxyFor
-     *            resource
-     * @param name
-     *            name of the resource in the folder, optional
-     * @return folder entry URI
-     * @throws IOException
-     *             ?
-     * @throws ROSRSException
-     *             incorrect response from ROSRS
-     */
-    protected abstract URI addFolderEntry(URI folder, URI proxyFor, String name)
-            throws IOException, ROSRSException;
 
 
     /**
@@ -629,16 +495,6 @@ public abstract class Wf2ROConverter {
      */
     public List<URI> getResourcesAdded() {
         return resourcesAdded;
-    }
-
-
-    public String getFoldersPropertiesFilename() {
-        return foldersPropertiesFilename;
-    }
-
-
-    public void setFoldersPropertiesFilename(String foldersPropertiesFilename) {
-        this.foldersPropertiesFilename = foldersPropertiesFilename;
     }
 
 }

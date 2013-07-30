@@ -4,8 +4,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -24,8 +22,6 @@ import pl.psnc.dl.wf4ever.vocabulary.RO;
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
 import uk.org.taverna.scufl2.api.io.WriterException;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 import com.hp.hpl.jena.ontology.Individual;
 import com.hp.hpl.jena.ontology.OntModel;
 import com.hp.hpl.jena.ontology.OntModelSpec;
@@ -63,30 +59,15 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
 
     /** Resources expected to be generated. */
     public static final List<String> EXPECTED_RESOURCES = Arrays.asList(
-        "http://example.org/ROs/ro1/folder1/Hello_Anyone.wfbundle", "http://example.org/ROs/ro1/.ro/body-wf-1",
+        "http://example.org/ROs/ro1/Hello_Anyone.wfbundle", "http://example.org/ROs/ro1/.ro/body-wf-1",
         "http://example.org/ROs/ro1/.ro/body-wf-2", "http://example.org/ROs/ro1/.ro/body-wf-3",
-        "http://example.org/ROs/ro1/.ro/body-wfdesc-4", "http://example.org/ROs/ro1/.ro/body-roevo-5", BODY_LINK_WFDEF,
-        "helloanyone.t2flow");
+        "http://example.org/ROs/ro1/.ro/body-wfdesc-4", "http://example.org/ROs/ro1/.ro/body-roevo-5", BODY_LINK_WFDEF);
 
     /** Annotations expected to be generated. */
     public static final List<String> EXPECTED_ANNOTATIONS = Arrays.asList("http://example.org/ROs/ro1/.ro/ann-wf-1",
         "http://example.org/ROs/ro1/.ro/ann-wf-2", "http://example.org/ROs/ro1/.ro/ann-wf-3",
         "http://example.org/ROs/ro1/.ro/ann-wfdesc-4", "http://example.org/ROs/ro1/.ro/ann-roevo-5",
         "http://example.org/ROs/ro1/.ro/ann-link-6");
-
-    /** folders. */
-    private List<URI> folders = new ArrayList<>();
-
-    /** folder entries. */
-    private Multimap<URI, FolderEntry> entries = HashMultimap.<URI, FolderEntry> create();
-
-    /** Folders expected to be read. */
-    public static final List<URI> EXPECTED_FOLDERS = Arrays.asList(URI.create("http://example.org/ROs/ro1/folder1/"),
-        URI.create("http://example.org/ROs/ro1/folder1/folder1a/"),
-        URI.create("http://example.org/ROs/ro1/folder%202/"), URI.create("http://example.org/ROs/ro1/folder3/"));
-
-    /** Entries expected to be read. */
-    public static final Multimap<URI, FolderEntry> EXPECTED_ENTRIES = HashMultimap.<URI, FolderEntry> create();
 
 
     /**
@@ -160,22 +141,10 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
      *            workflow URI
      */
     public MockupWf2ROConverter(WorkflowBundle wfbundle, URI wfUri) {
-        super(wfbundle, wfUri, "testfolders.properties");
+        super(wfbundle, wfUri);
         Individual ro = manifest.createIndividual(RO_URI.toString(), RO.ResearchObject);
         Individual m = manifest.createIndividual(RO_URI.resolve(".ro/manifest.rdf").toString(), RO.ResearchObject);
         m.addProperty(ORE.describes, ro);
-
-        EXPECTED_ENTRIES.put(URI.create("http://example.org/ROs/ro1/folder1/"),
-            new FolderEntry(URI.create("http://example.org/ROs/ro1/folder1/folder1a/"), null));
-        EXPECTED_ENTRIES.put(URI.create("http://example.org/ROs/ro1/folder%202/"),
-            new FolderEntry(URI.create("http://example.org/ROs/ro1/folder1/folder1a/"), null));
-        EXPECTED_ENTRIES.put(URI.create("http://example.org/ROs/ro1/folder%202/"),
-            new FolderEntry(URI.create("http://google.com"), "Google/"));
-        EXPECTED_ENTRIES.put(URI.create("http://example.org/ROs/ro1/folder1/"),
-            new FolderEntry(URI.create("http://example.org/ROs/ro1/folder1/Hello_Anyone.wfbundle"),
-                    "Hello_Anyone.wfbundle"));
-        EXPECTED_ENTRIES.put(URI.create("http://example.org/ROs/ro1/folder3/"),
-            new FolderEntry(URI.create("helloanyone.t2flow"), null));
     }
 
 
@@ -254,38 +223,6 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
         URI body = URI.create(res.getPropertyResourceValue(AO.body).getURI());
 
         model.read(new ByteArrayInputStream(resources.get(body).getBytes()), null, "TURTLE");
-    }
-
-
-    @Override
-    protected URI createFolder(URI roURI, String path)
-            throws IOException, ROSRSException {
-        try {
-            URI folder = new URI(roURI.getScheme(), roURI.getHost(), roURI.getPath() + path, null);
-            folders.add(folder);
-            return folder;
-        } catch (URISyntaxException e) {
-            LOGGER.error("Wrong URI", e);
-            return null;
-        }
-    }
-
-
-    @Override
-    protected URI addFolderEntry(URI folder, URI proxyFor, String name)
-            throws IOException, ROSRSException {
-        entries.put(folder, new FolderEntry(proxyFor, name));
-        return folder.resolve("entries/" + entries.get(folder).size());
-    }
-
-
-    public List<URI> getFolders() {
-        return folders;
-    }
-
-
-    public Multimap<URI, FolderEntry> getEntries() {
-        return entries;
     }
 
 }
