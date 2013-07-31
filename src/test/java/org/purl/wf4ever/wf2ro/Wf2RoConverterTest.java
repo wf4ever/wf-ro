@@ -67,8 +67,8 @@ public class Wf2RoConverterTest {
         //        System.out.println(converter.getResources().keySet());
         assertEquals(MockupWf2ROConverter.EXPECTED_ANNOTATIONS.size() + 1, converter.getResourcesAdded().size());
 
-        OntModel model = converter.createManifestModel(null);
-        Individual ro = model.getIndividual(converter.createResearchObject(null).toString());
+        OntModel model = converter.createManifestModel();
+        Individual ro = model.getIndividual(MockupWf2ROConverter.RO_URI.toString());
         assertNotNull("RO exists in the manifest", ro);
         // should aggregate the workflow, 2 annotations about it and 2 annotation bodies
         List<RDFNode> aggregatedResources = ro.listPropertyValues(ORE.aggregates).toList();

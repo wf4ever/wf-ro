@@ -3,6 +3,7 @@ package org.purl.wf4ever.wf2ro.rest;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.head;
 import static com.github.tomakehurst.wiremock.client.WireMock.matching;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
@@ -31,7 +32,9 @@ import org.purl.wf4ever.rosrs.client.exception.ROSRSException;
 import org.purl.wf4ever.wf2ro.IntegrationTest;
 import org.purl.wf4ever.wf2ro.rest.Job.State;
 
+import pl.psnc.dl.wf4ever.vocabulary.AO;
 import pl.psnc.dl.wf4ever.vocabulary.ORE;
+import uk.org.taverna.scufl2.rdfxml.RDFXMLReader;
 import uk.org.taverna.scufl2.translator.t2flow.T2FlowReader;
 
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
@@ -63,15 +66,13 @@ public class RestApiTest extends JerseyTest {
     /** workflow format MIME type. */
     private static final String TAVERNA_FORMAT = T2FlowReader.APPLICATION_VND_TAVERNA_T2FLOW_XML;
 
-    /** RODL URI. */
-    private static final URI ROSRS_URI = URI.create("http://localhost:8089/rodl/ROs/");
-
     /** RO URI that already exists. */
     private static final URI RO_URI_EXISTING = URI.create("http://localhost:8089/rodl/ROs/1/");
 
     /** RO URI that can always be created. */
     private static final URI RO_URI_NEW = URI.create("http://localhost:8089/rodl/ROs/2/");
 
+    /** some fake token. */
     private static final String TOKEN = "foo";
 
     /**
@@ -87,8 +88,7 @@ public class RestApiTest extends JerseyTest {
         super.setUp();
         setUpGetWorkflow();
         setUpCreateRo();
-        setUpCreateFolder();
-        setUpCreateFolderEntry();
+        setUpGetRo();
         setUpCreateAnnotation();
         setUpCreateResource();
     }
@@ -109,6 +109,21 @@ public class RestApiTest extends JerseyTest {
 
 
     /**
+     * Configure WireMock to handle folder creation.
+     * 
+     * @throws IOException
+     *             if the test resources are not available
+     */
+    protected void setUpGetRo()
+            throws IOException {
+        InputStream manifest = getClass().getClassLoader().getResourceAsStream("rodl/manifest.rdf");
+        stubFor(get(urlMatching("/rodl/ROs/[12]/")).willReturn(
+            aResponse().withStatus(200).withHeader("Content-Type", "application/rdf+xml")
+                    .withBody(IOUtils.toByteArray(manifest))));
+    }
+
+
+    /**
      * Configure WireMock to return resource maps.
      * 
      * @throws IOException
@@ -116,61 +131,14 @@ public class RestApiTest extends JerseyTest {
      */
     protected void setUpCreateRo()
             throws IOException {
-        stubFor(get(urlEqualTo("/rodl/ROs/")).willReturn(
-            aResponse().withStatus(200).withHeader("Content-Type", "text/uri-list").withBody("" + RO_URI_EXISTING)));
+        stubFor(head(urlEqualTo("/rodl/ROs/1/")).willReturn(
+            aResponse().withStatus(200).withHeader("Content-Type", "application/rdf+xml").withBody("")));
         stubFor(post(urlEqualTo("/rodl/ROs/"))
                 .withHeader("Slug", equalTo("2"))
                 .withHeader("Accept", equalTo("application/rdf+xml"))
                 .willReturn(
                     aResponse().withStatus(201).withHeader("Content-Type", "application/rdf+xml")
                             .withHeader("Location", RO_URI_NEW.toString())));
-    }
-
-
-    /**
-     * Configure WireMock to handle folder creation.
-     * 
-     * @throws IOException
-     *             if the test resources are not available
-     */
-    protected void setUpCreateFolder()
-            throws IOException {
-        InputStream response = getClass().getClassLoader().getResourceAsStream("rodl/folder-created-response.rdf");
-        stubFor(post(urlMatching("/.+")).withHeader("Content-Type", equalTo("application/vnd.wf4ever.folder"))
-                .willReturn(
-                    aResponse()
-                            .withStatus(201)
-                            .withHeader("Content-Type", "application/rdf+xml")
-                            .withHeader("Location", "foo")
-                            .withHeader(
-                                "Link",
-                                "<http://localhost:8089/" + UUID.randomUUID() + ">; rel=\"" + ORE.proxyFor.toString()
-                                        + "\"")
-                            .withHeader("Link", "<" + "foo" + ">; rel=\"" + ORE.isDescribedBy.toString() + "\"")
-                            .withBody(IOUtils.toByteArray(response))));
-    }
-
-
-    /**
-     * Configure WireMock to handle folder entries creation.
-     * 
-     * @throws IOException
-     *             if the test resources are not available
-     */
-    protected void setUpCreateFolderEntry()
-            throws IOException {
-        stubFor(post(urlMatching("/.+")).withHeader("Content-Type", equalTo("application/vnd.wf4ever.folderentry"))
-                .willReturn(
-                    aResponse()
-                            .withStatus(201)
-                            .withHeader("Content-Type", "application/rdf+xml")
-                            .withHeader("Location", "foo")
-                            .withHeader(
-                                "Link",
-                                "<http://localhost:8089/" + UUID.randomUUID() + ">; rel=\"" + ORE.proxyFor.toString()
-                                        + "\"")
-                            .withHeader("Link", "<" + "foo" + ">; rel=\"" + ORE.isDescribedBy.toString() + "\"")
-                            .withBody("")));
     }
 
 
@@ -182,14 +150,17 @@ public class RestApiTest extends JerseyTest {
      */
     protected void setUpCreateAnnotation()
             throws IOException {
-        InputStream response = getClass().getClassLoader().getResourceAsStream("rodl/folder-created-response.rdf");
-        stubFor(post(urlEqualTo("/rodl/ROs/[12]/")).withHeader("Link", matching(".+annotatesResource.+")).willReturn(
-            aResponse()
-                    .withStatus(201)
-                    .withHeader("Location", "foo".toString())
-                    .withHeader("Link",
-                        "<http://localhost:8089/" + UUID.randomUUID() + ">; rel=\"" + ORE.proxyFor.toString() + "\"")
-                    .withBody(IOUtils.toByteArray(response))));
+        String annUri = "http://localhost:8089/" + UUID.randomUUID();
+        String proxyUri = "http://localhost:8089/" + UUID.randomUUID();
+        String bodyUri = "http://localhost:8089/" + UUID.randomUUID();
+        String response = IOUtils
+                .toString(getClass().getClassLoader().getResourceAsStream("rodl/annotation-created-response.rdf"))
+                .replaceAll("\\{annUri\\}", annUri).replaceAll("\\{proxyUri\\}", proxyUri)
+                .replaceAll("\\{bodyUri\\}", bodyUri);
+        stubFor(post(urlMatching("/rodl/ROs/[12]/")).withHeader("Link", matching(".+annotatesResource.+")).willReturn(
+            aResponse().withStatus(201).withHeader("Location", proxyUri)
+                    .withHeader("Link", "<" + annUri + ">; rel=\"" + ORE.proxyFor.toString() + "\"")
+                    .withHeader("Link", "<" + bodyUri + ">; rel=\"" + AO.body.toString() + "\"").withBody(response)));
     }
 
 
@@ -201,15 +172,18 @@ public class RestApiTest extends JerseyTest {
      */
     protected void setUpCreateResource()
             throws IOException {
-        InputStream response = getClass().getClassLoader().getResourceAsStream("rodl/resource-created-response.rdf");
-        stubFor(post(urlMatching("/.+")).willReturn(
-            aResponse()
-                    .withStatus(201)
-                    .withHeader("Content-Type", "text/plain")
-                    .withHeader("Location", "foo")
-                    .withHeader("Link",
-                        "<http://localhost:8089/" + UUID.randomUUID() + ">; rel=\"" + ORE.proxyFor.toString() + "\"")
-                    .withBody(IOUtils.toByteArray(response))));
+        String resUri = "http://localhost:8089/" + UUID.randomUUID();
+        String proxyUri = "http://localhost:8089/" + UUID.randomUUID();
+        String response = IOUtils
+                .toString(getClass().getClassLoader().getResourceAsStream("rodl/resource-created-response.rdf"))
+                .replaceAll("\\{resUri\\}", resUri).replaceAll("\\{proxyUri\\}", proxyUri);
+        stubFor(post(urlMatching("/rodl/ROs/[12]/")).withHeader("Content-Type",
+            equalTo(RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE))
+                .willReturn(
+                    aResponse().withStatus(201).withHeader("Content-Type", "application/rdf+xml")
+                            .withHeader("Location", proxyUri)
+                            .withHeader("Link", "<" + resUri + ">; rel=\"" + ORE.proxyFor.toString() + "\"")
+                            .withBody(response)));
     }
 
 
@@ -269,8 +243,8 @@ public class RestApiTest extends JerseyTest {
             fail("The job hasn't finished on time");
         }
         assertNotNull(status.getAdded());
-        // this workflow has 3 inner annotations, plus roevo & wfdesc & link, plus the workflow itself, plus 16 folders = 22
-        Assert.assertEquals(23, status.getAdded().size());
+        // this workflow has 3 inner annotations, plus roevo & wfdesc & link, plus the workflow itself = 7
+        Assert.assertEquals(7, status.getAdded().size());
     }
 
 
@@ -319,8 +293,8 @@ public class RestApiTest extends JerseyTest {
             fail("The job hasn't finished on time");
         }
         assertNotNull(status.getAdded());
-        // this workflow has 3 inner annotations, plus roevo & wfdesc & link, plus the workflow itself, plus 16 folders = 22
-        Assert.assertEquals(23, status.getAdded().size());
+        // this workflow has 3 inner annotations, plus roevo & wfdesc & link, plus the workflow itself = 7
+        Assert.assertEquals(7, status.getAdded().size());
     }
 
 
@@ -376,8 +350,8 @@ public class RestApiTest extends JerseyTest {
             fail("The job hasn't finished on time");
         }
         assertNotNull(status.getAdded());
-        // this workflow has 3 inner annotations, plus roevo & wfdesc & link, plus the workflow itself, plus 16 folders = 22
-        Assert.assertEquals(23, status.getAdded().size());
+        // this workflow has 3 inner annotations, plus roevo & wfdesc & link, plus the workflow itself = 7
+        Assert.assertEquals(7, status.getAdded().size());
         response.close();
     }
 
@@ -446,8 +420,8 @@ public class RestApiTest extends JerseyTest {
             fail("The 2nd job hasn't finished on time");
         }
         assertNotNull(status.getAdded());
-        // this workflow has 3 inner annotations, plus roevo & wfdesc & link, plus the workflow itself, plus 16 folders = 22
-        Assert.assertEquals(23, status.getAdded().size());
+        // this workflow has 3 inner annotations, plus roevo & wfdesc & link, plus the workflow itself = 7
+        Assert.assertEquals(7, status.getAdded().size());
     }
 
 
@@ -467,7 +441,7 @@ public class RestApiTest extends JerseyTest {
             webResource = resource().path("wf-ro/");
         }
 
-        JobConfig config = new JobConfig(WF_URI, TAVERNA_FORMAT, URI.create("http://foobar"), TOKEN);
+        JobConfig config = new JobConfig(WF_URI, TAVERNA_FORMAT, URI.create("http://this_is_an_incorrect_uri"), TOKEN);
 
         ClientResponse response = webResource.path("jobs").type(MediaType.APPLICATION_JSON_TYPE)
                 .post(ClientResponse.class, config);

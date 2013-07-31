@@ -13,15 +13,18 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 import org.apache.log4j.Logger;
 import org.openrdf.rio.RDFFormat;
+import org.purl.wf4ever.rosrs.client.Annotable;
+import org.purl.wf4ever.rosrs.client.Annotation;
+import org.purl.wf4ever.rosrs.client.ResearchObject;
+import org.purl.wf4ever.rosrs.client.Resource;
+import org.purl.wf4ever.rosrs.client.exception.ROException;
 import org.purl.wf4ever.rosrs.client.exception.ROSRSException;
 import org.purl.wf4ever.wfdesc.scufl2.ROEvoSerializer;
 
-import uk.org.taverna.scufl2.api.annotation.Annotation;
 import uk.org.taverna.scufl2.api.common.NamedSet;
 import uk.org.taverna.scufl2.api.common.URITools;
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
@@ -29,13 +32,9 @@ import uk.org.taverna.scufl2.api.io.WorkflowBundleIO;
 import uk.org.taverna.scufl2.api.io.WriterException;
 import uk.org.taverna.scufl2.rdfxml.RDFXMLReader;
 
-import com.hp.hpl.jena.ontology.OntModel;
-import com.hp.hpl.jena.ontology.OntModelSpec;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.Property;
-import com.hp.hpl.jena.rdf.model.RDFNode;
-import com.hp.hpl.jena.rdf.model.Resource;
 
 /**
  * This class defines the main logic of workflow-RO conversion. It is abstract because it leaves the resource upload
@@ -109,30 +108,28 @@ public abstract class Wf2ROConverter {
         }
         UUID wfUUID = getWorkflowBundleUUID(wfbundle);
         String wfname = wfbundle.getMainWorkflow().getName() + ".wfbundle";
-        URI roURI = createResearchObject(wfUUID);
-        URI wfbundleUri = addWorkflowBundle(roURI, wfbundle, wfname);
-        resourcesAdded.add(wfbundleUri);
+        ResearchObject ro = createResearchObject(wfUUID);
+        Resource wfbundleAggregated = addWorkflowBundle(ro, wfbundle, wfname);
+        resourcesAdded.add(wfbundleAggregated.getUri());
         try {
-            extractAnnotations(roURI, wfbundleUri, wfbundle, resourcesAdded);
+            extractAnnotations(ro, wfbundleAggregated, wfbundle, resourcesAdded);
         } catch (IOException | ROSRSException e) {
             LOG.error("Can't extract annotations from workflow", e);
         }
 
-        URI wfdescURI = null;
         try {
-            wfdescURI = addWfDescAnnotation(roURI, wfbundle, wfbundleUri);
-            resourcesAdded.add(wfdescURI);
+            resourcesAdded.add(addWfDescAnnotation(ro, wfbundle, wfbundleAggregated).getUri());
         } catch (IOException | ROSRSException e) {
             LOG.error("Can't upload workflow desc", e);
         }
         try {
-            resourcesAdded.add(addRoEvoAnnotation(roURI, wfbundle, wfbundleUri));
+            resourcesAdded.add(addRoEvoAnnotation(ro, wfbundle, wfbundleAggregated).getUri());
         } catch (IOException | ROSRSException e) {
             LOG.error("Can't upload RO evolution desc", e);
         }
         try {
             URI internalWorkflowURI = uriTools.uriForBean(wfbundle.getMainWorkflow());
-            resourcesAdded.add(addLinkAnnotation(roURI, originalWfUri, wfbundleUri, internalWorkflowURI));
+            resourcesAdded.add(addLinkAnnotation(ro, originalWfUri, wfbundleAggregated, internalWorkflowURI).getUri());
         } catch (ROSRSException e) {
             LOG.error("Can't upload the link annotation", e);
         }
@@ -156,7 +153,7 @@ public abstract class Wf2ROConverter {
     /**
      * Upload the workflow bundle and the resources it contains to RODL.
      * 
-     * @param roURI
+     * @param ro
      *            research object URI
      * @param wfbundle
      *            the workflow bundle
@@ -169,9 +166,11 @@ public abstract class Wf2ROConverter {
      *             ROSR service error
      * @throws WriterException
      *             workflow bundle error
+     * @throws ROException
+     *             when the manifest is incorrect
      */
-    protected URI addWorkflowBundle(URI roURI, final WorkflowBundle wfbundle, String wfPath)
-            throws IOException, ROSRSException, WriterException {
+    protected Resource addWorkflowBundle(ResearchObject ro, final WorkflowBundle wfbundle, String wfPath)
+            throws IOException, ROSRSException, WriterException, ROException {
         //save the scufl2
         final PipedInputStream in = new PipedInputStream();
         final PipedOutputStream out = new PipedOutputStream(in);
@@ -192,9 +191,7 @@ public abstract class Wf2ROConverter {
                 }
             }
         }).start();
-        uploadAggregatedResource(roURI, wfPath, in, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
-
-        return roURI.resolve(wfPath);
+        return uploadAggregatedResource(ro, wfPath, in, RDFXMLReader.APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
     }
 
 
@@ -205,9 +202,9 @@ public abstract class Wf2ROConverter {
      * Update: only annotations of the workflow bundle or the main workflow are uploaded, with the workflow bundle as
      * their target. Others are skipped because they point to resources that are not aggregated.
      * 
-     * @param roURI
+     * @param ro
      *            RO URI
-     * @param wfURI
+     * @param wfbundleAggregated
      *            workflow bundle ROSRS URI
      * @param wfbundle
      *            workflow bundle
@@ -217,16 +214,19 @@ public abstract class Wf2ROConverter {
      *             cannot read the annotation body
      * @throws ROSRSException
      *             ROSR service error
+     * @throws ROException
+     *             when the manifest is incorrect
      */
-    private void extractAnnotations(URI roURI, URI wfURI, final WorkflowBundle wfbundle, List<URI> resourcesAdded2)
-            throws IOException, ROSRSException {
+    private void extractAnnotations(ResearchObject ro, Resource wfbundleAggregated, final WorkflowBundle wfbundle,
+            List<URI> resourcesAdded2)
+            throws IOException, ROSRSException, ROException {
         //search for annotations
         URITools tools = new URITools();
-        NamedSet<Annotation> annotations = wfbundle.getAnnotations();
-        for (Annotation annotation : annotations) {
+        NamedSet<uk.org.taverna.scufl2.api.annotation.Annotation> annotations = wfbundle.getAnnotations();
+        for (uk.org.taverna.scufl2.api.annotation.Annotation annotation : annotations) {
             if (annotation.getTarget().equals(wfbundle) || annotation.getTarget().equals(wfbundle.getMainWorkflow())) {
-                URI target = wfURI;
-                LOG.debug(String.format("Uploading annotation for %s taken from %s", target, annotation.getBody()));
+                LOG.debug(String.format("Uploading annotation for %s taken from %s", wfbundleAggregated.getUri(),
+                    annotation.getBody()));
                 Model annBody = ModelFactory.createDefaultModel();
                 try (InputStream wfAnnBody = wfbundle.getResources().getResourceAsInputStream(
                     annotation.getBody().toASCIIString())) {
@@ -235,8 +235,8 @@ public abstract class Wf2ROConverter {
                 try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
                     annBody.write(out);
                     try (ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray())) {
-                        resourcesAdded2.add(uploadAnnotation(roURI, "wf", Collections.singleton(target), in,
-                            "application/rdf+xml"));
+                        resourcesAdded2.add(uploadAnnotation(ro, "wf", wfbundleAggregated, in, "application/rdf+xml")
+                                .getUri());
                     }
                 }
             } else {
@@ -250,20 +250,23 @@ public abstract class Wf2ROConverter {
     /**
      * Generates and adds a workflow bundle history annotation using the roevo ontology.
      * 
-     * @param roURI
+     * @param ro
      *            research object URI
      * @param wfbundle
      *            the workflow bundle
-     * @param rodlWfURI
+     * @param wfbundleAggregated
      *            the workflow bundle URI used in the research object
      * @return the annotation body URI
      * @throws IOException
      *             when there was a problem with getting/uploading the RO resources
      * @throws ROSRSException
      *             ROSR service error
+     * @throws ROException
+     *             when the manifest is incorrect
      */
-    protected URI addRoEvoAnnotation(URI roURI, final WorkflowBundle wfbundle, URI rodlWfURI)
-            throws IOException, ROSRSException {
+    protected Annotation addRoEvoAnnotation(ResearchObject ro, final WorkflowBundle wfbundle,
+            Resource wfbundleAggregated)
+            throws IOException, ROSRSException, ROException {
         final PipedInputStream in = new PipedInputStream();
         final PipedOutputStream out = new PipedOutputStream(in);
         new Thread(new Runnable() {
@@ -283,27 +286,30 @@ public abstract class Wf2ROConverter {
                 }
             }
         }).start();
-        return uploadAnnotation(roURI, "roevo", Collections.singleton(rodlWfURI), in, TEXT_TURTLE);
+        return uploadAnnotation(ro, "roevo", wfbundleAggregated, in, TEXT_TURTLE);
     }
 
 
     /**
      * Generates and adds a workflow bundle description annotation using the wfdesc ontology.
      * 
-     * @param roURI
+     * @param ro
      *            research object URI
      * @param wfbundle
      *            the workflow bundle
-     * @param rodlWfURI
+     * @param wfbundleAggregated
      *            the workflow bundle URI used in the research object
      * @return the annotation body URI
      * @throws IOException
      *             when there was a problem with getting/uploading the RO resources
      * @throws ROSRSException
      *             when there was a problem with getting/uploading the RO resources
+     * @throws ROException
+     *             when the manifest is incorrect
      */
-    protected URI addWfDescAnnotation(URI roURI, final WorkflowBundle wfbundle, URI rodlWfURI)
-            throws IOException, ROSRSException {
+    protected Annotation addWfDescAnnotation(ResearchObject ro, final WorkflowBundle wfbundle,
+            Resource wfbundleAggregated)
+            throws IOException, ROSRSException, ROException {
         final PipedInputStream in = new PipedInputStream();
         final PipedOutputStream out = new PipedOutputStream(in);
         new Thread(new Runnable() {
@@ -322,7 +328,7 @@ public abstract class Wf2ROConverter {
                 }
             }
         }).start();
-        return uploadAnnotation(roURI, "wfdesc", Collections.singleton(rodlWfURI), in, TEXT_TURTLE);
+        return uploadAnnotation(ro, "wfdesc", wfbundleAggregated, in, TEXT_TURTLE);
     }
 
 
@@ -330,24 +336,27 @@ public abstract class Wf2ROConverter {
      * Generates and adds an annotation linking the aggregated workflow bundle (ROSRS URI) with its main workflow
      * (internal URI).
      * 
-     * @param roURI
+     * @param ro
      *            research object URI
      * @param originalWfUri
      *            original workflow Uri
-     * @param wfUri
+     * @param wfbundleAggregated
      *            the workflow bundle URI
      * @param workflowIdentifier
      *            the workflow internal URI
      * @return the annotation body URI
      * @throws ROSRSException
      *             when there was a problem with getting/uploading the RO resources
+     * @throws ROException
+     *             when the manifest is incorrect
      */
-    protected URI addLinkAnnotation(URI roURI, URI originalWfUri, URI wfUri, URI workflowIdentifier)
-            throws ROSRSException {
+    protected Annotation addLinkAnnotation(ResearchObject ro, URI originalWfUri, Resource wfbundleAggregated,
+            URI workflowIdentifier)
+            throws ROSRSException, ROException {
         Model model = ModelFactory.createDefaultModel();
-        Resource originalR = model.createResource(originalWfUri.toString());
-        Resource wfbundleR = model.createResource(wfUri.toString());
-        Resource mainwfR = model.createResource(workflowIdentifier.toString());
+        com.hp.hpl.jena.rdf.model.Resource originalR = model.createResource(originalWfUri.toString());
+        com.hp.hpl.jena.rdf.model.Resource wfbundleR = model.createResource(wfbundleAggregated.getUri().toString());
+        com.hp.hpl.jena.rdf.model.Resource mainwfR = model.createResource(workflowIdentifier.toString());
         //FIXME move that property to rodl-common
         Property link = model.createProperty("http://purl.org/wf4ever/wfdesc#hasWorkflowDefinition");
         model.add(mainwfR, link, wfbundleR);
@@ -357,52 +366,8 @@ public abstract class Wf2ROConverter {
         model.write(out, "TURTLE");
         ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
 
-        return uploadAnnotation(roURI, "link", Collections.singleton(wfUri), in, RDFFormat.TURTLE.getDefaultMIMEType());
+        return uploadAnnotation(ro, "link", wfbundleAggregated, in, RDFFormat.TURTLE.getDefaultMIMEType());
     }
-
-
-    /**
-     * Search for external resources in the wfdesc description and aggregate them in the RO.
-     * 
-     * @param researchObject
-     *            research object URI
-     * @param wfdescURI
-     *            workflow description URI
-     * @throws ROSRSException
-     *             when there was a problem with uploading the RO resources
-     */
-    @SuppressWarnings("unused")
-    private void aggregateWorkflowDependencies(URI researchObject, URI wfdescURI)
-            throws ROSRSException {
-        OntModel model = ModelFactory.createOntologyModel(OntModelSpec.OWL_LITE_MEM);
-        readModelFromUri(model, wfdescURI);
-        Property wsdlUri = model.createProperty("http://purl.org/wf4ever/wf4ever#wsdlURI");
-        List<RDFNode> wsdls = model.listObjectsOfProperty(wsdlUri).toList();
-        for (RDFNode wsdl : wsdls) {
-            if (wsdl.isLiteral()) {
-                if ("http://www.w3.org/2001/XMLSchema#anyURI".equals(wsdl.asLiteral().getDatatypeURI())) {
-                    URI wsdlURI = URI.create(wsdl.asLiteral().getString());
-                    aggregateResource(researchObject, wsdlURI);
-                    resourcesAdded.add(wsdlURI);
-                } else {
-                    LOG.error("The WSDL URI was not a Literal, skipping: " + wsdl.toString());
-                }
-            } else {
-                LOG.error("The WSDL URI was not a Literal, skipping: " + wsdl.toString());
-            }
-        }
-    }
-
-
-    /**
-     * Read a model given a URI. RDF/XML is assumed.
-     * 
-     * @param model
-     *            Ont model
-     * @param wfdescURI
-     *            RDF/XML source URI
-     */
-    public abstract void readModelFromUri(OntModel model, URI wfdescURI);
 
 
     /**
@@ -412,18 +377,18 @@ public abstract class Wf2ROConverter {
      * @param wfUUID
      *            UUID of the workflow bundle that will be uploaded later.
      * 
-     * @return the research object URI
+     * @return the research object
      * @throws ROSRSException
      *             ROSR service error
      */
-    protected abstract URI createResearchObject(UUID wfUUID)
+    protected abstract ResearchObject createResearchObject(UUID wfUUID)
             throws ROSRSException;
 
 
     /**
      * Saves an aggregated resource to RODL.
      * 
-     * @param researchObject
+     * @param ro
      *            research object URI
      * @param path
      *            the resource path
@@ -431,39 +396,28 @@ public abstract class Wf2ROConverter {
      *            resource content type to be sent as in HTTP request
      * @param in
      *            resource input stream
+     * @return aggregated resource
      * @throws IOException
      *             when there are problems with uploading the resource
      * @throws ROSRSException
      *             ROSR service error
+     * @throws ROException
+     *             when the manifest is incorrect
      */
-    protected abstract void uploadAggregatedResource(URI researchObject, String path, InputStream in, String contentType)
-            throws IOException, ROSRSException;
-
-
-    /**
-     * Saves an URI as an aggregated resource of an RO in RODL.
-     * 
-     * @param researchObject
-     *            research object URI
-     * @param resource
-     *            resource URI
-     * @throws ROSRSException
-     *             when there are problems with uploading the resource
-     * @throws ROSRSException
-     */
-    protected abstract void aggregateResource(URI researchObject, URI resource)
-            throws ROSRSException;
+    protected abstract Resource uploadAggregatedResource(ResearchObject ro, String path, InputStream in,
+            String contentType)
+            throws IOException, ROSRSException, ROException;
 
 
     /**
      * Saves a resource in RODL as an annotation body of another resource.
      * 
-     * @param researchObject
+     * @param ro
      *            research object URI
      * @param name
      *            annotation name to use in filename
-     * @param targets
-     *            list of URIs of resources that are annotated
+     * @param target
+     *            resource that is annotated
      * @param contentType
      *            content type
      * @param in
@@ -471,21 +425,12 @@ public abstract class Wf2ROConverter {
      * @return annotation body URI
      * @throws ROSRSException
      *             when there are problems with uploading the resource
-     * @throws IOException
+     * @throws ROException
+     *             when the manifest is incorrect
      */
-    protected abstract URI uploadAnnotation(URI researchObject, String name, Set<URI> targets, InputStream in,
+    protected abstract Annotation uploadAnnotation(ResearchObject ro, String name, Annotable target, InputStream in,
             String contentType)
-            throws ROSRSException;
-
-
-    /**
-     * Create Jena model of the manifest.
-     * 
-     * @param roURI
-     *            research object URI
-     * @return the Jena model of the manifest
-     */
-    protected abstract OntModel createManifestModel(URI roURI);
+            throws ROSRSException, ROException;
 
 
     /**

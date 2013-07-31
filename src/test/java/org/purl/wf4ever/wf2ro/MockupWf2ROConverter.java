@@ -1,19 +1,22 @@
 package org.purl.wf4ever.wf2ro;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.log4j.Logger;
+import org.purl.wf4ever.rosrs.client.Annotable;
+import org.purl.wf4ever.rosrs.client.Annotation;
+import org.purl.wf4ever.rosrs.client.ResearchObject;
+import org.purl.wf4ever.rosrs.client.exception.ROException;
 import org.purl.wf4ever.rosrs.client.exception.ROSRSException;
 
 import pl.psnc.dl.wf4ever.vocabulary.AO;
@@ -148,26 +151,31 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
     }
 
 
-    @Override
-    protected OntModel createManifestModel(URI roURI) {
+    /**
+     * Just for tests.
+     * 
+     * @return Jena model
+     */
+    public OntModel createManifestModel() {
         return manifest;
     }
 
 
     @Override
-    protected URI createResearchObject(UUID wfUUID) {
-        return RO_URI;
+    protected ResearchObject createResearchObject(UUID wfUUID) {
+        return new ResearchObject(RO_URI, null);
     }
 
 
     @Override
-    protected URI addWorkflowBundle(URI roURI, WorkflowBundle wfbundle, String wfUUID)
-            throws IOException, ROSRSException, WriterException {
-        URI wfURI = super.addWorkflowBundle(roURI, wfbundle, wfUUID);
-        Resource ro = manifest.createResource(roURI.toString());
-        Individual res = manifest.createIndividual(wfURI.toString(), RO.Resource);
-        ro.addProperty(ORE.aggregates, res);
-        return wfURI;
+    protected org.purl.wf4ever.rosrs.client.Resource addWorkflowBundle(ResearchObject ro,
+            final WorkflowBundle wfbundle, String wfPath)
+            throws IOException, ROSRSException, WriterException, ROException {
+        org.purl.wf4ever.rosrs.client.Resource wf = super.addWorkflowBundle(ro, wfbundle, wfPath);
+        Resource roR = manifest.createResource(ro.getUri().toString());
+        Individual res = manifest.createIndividual(wf.getUri().toString(), RO.Resource);
+        roR.addProperty(ORE.aggregates, res);
+        return wf;
     }
 
 
@@ -177,52 +185,38 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
 
 
     @Override
-    protected void uploadAggregatedResource(URI researchObject, String path, InputStream in, String contentType)
-            throws IOException {
-        URI uri = researchObject.resolve(path);
+    protected org.purl.wf4ever.rosrs.client.Resource uploadAggregatedResource(ResearchObject ro, String path,
+            InputStream in, String contentType)
+            throws IOException, ROSRSException, ROException {
+        URI uri = ro.getUri().resolve(path);
         resources.put(uri, IOUtils.toString(in));
-        Resource ro = manifest.createResource(researchObject.toString());
+        Resource roR = manifest.createResource(ro.toString());
         Individual res = manifest.createIndividual(uri.toString(), RO.Resource);
-        ro.addProperty(ORE.aggregates, res);
+        roR.addProperty(ORE.aggregates, res);
+        return new org.purl.wf4ever.rosrs.client.Resource(ro, uri, null, null, null);
     }
 
 
     @Override
-    protected URI uploadAnnotation(URI researchObject, String name, Set<URI> targets, InputStream in, String contentType) {
+    protected Annotation uploadAnnotation(ResearchObject ro, String name, Annotable target, InputStream in,
+            String contentType)
+            throws ROSRSException, ROException {
         annCnt++;
-        URI ann = researchObject.resolve(".ro/ann-" + name + "-" + annCnt);
-        URI body = researchObject.resolve(".ro/body-" + name + "-" + annCnt);
+        URI ann = ro.getUri().resolve(".ro/ann-" + name + "-" + annCnt);
+        URI body = ro.getUri().resolve(".ro/body-" + name + "-" + annCnt);
         try {
             resources.put(body, IOUtils.toString(in));
         } catch (IOException e) {
             LOGGER.error(e);
         }
-        Resource ro = manifest.createResource(researchObject.toString());
+        Resource roR = manifest.createResource(ro.getUri().toString());
         Individual res = manifest.createIndividual(ann.toString(), RO.AggregatedAnnotation);
         Resource bodyInd = manifest.createResource(body.toString());
-        ro.addProperty(ORE.aggregates, res);
+        roR.addProperty(ORE.aggregates, res);
         res.addProperty(AO.body, bodyInd);
         Individual res2 = manifest.createIndividual(body.toString(), RO.Resource);
-        ro.addProperty(ORE.aggregates, res2);
-        return ann;
-    }
-
-
-    @Override
-    protected void aggregateResource(URI researchObject, URI resource) {
-        resources.put(resource, null);
-        Resource ro = manifest.createResource(researchObject.toString());
-        Individual res = manifest.createIndividual(resource.toString(), RO.Resource);
-        ro.addProperty(ORE.aggregates, res);
-    }
-
-
-    @Override
-    public void readModelFromUri(OntModel model, URI wfdescURI) {
-        Individual res = manifest.getIndividual(wfdescURI.toString());
-        URI body = URI.create(res.getPropertyResourceValue(AO.body).getURI());
-
-        model.read(new ByteArrayInputStream(resources.get(body).getBytes()), null, "TURTLE");
+        roR.addProperty(ORE.aggregates, res2);
+        return new Annotation(ro, ann, null, Collections.singleton(body), null, null);
     }
 
 }

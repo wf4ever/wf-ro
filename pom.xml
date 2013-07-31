@@ -79,7 +79,7 @@
 		<dependency>
 			<groupId>org.purl.wf4ever</groupId>
 			<artifactId>rodl-client-common</artifactId>
-			<version>2.2.0</version>
+			<version>2.5.2-SNAPSHOT</version>
 			<exclusions>
 				<exclusion>
 					<groupId>xerces</groupId>
