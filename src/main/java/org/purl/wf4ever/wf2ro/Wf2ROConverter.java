@@ -228,8 +228,11 @@ public abstract class Wf2ROConverter {
                 LOG.debug(String.format("Uploading annotation for %s taken from %s", wfbundleAggregated.getUri(),
                     annotation.getBody()));
                 Model annBody = ModelFactory.createDefaultModel();
+                String annotationBody = annotation.getBody().toASCIIString();
                 try (InputStream wfAnnBody = wfbundle.getResources().getResourceAsInputStream(
-                    annotation.getBody().toASCIIString())) {
+                    annotationBody)) {
+//                    System.out.println(annotationBody);
+//                    System.out.println(wfbundle.getResources().getResourceAsString(annotationBody));
                     annBody.read(wfAnnBody, wfbundle.getGlobalBaseURI().resolve(annotation.getBody()).toASCIIString());
                 }
                 try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
