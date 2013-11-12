@@ -28,6 +28,7 @@ import org.purl.wf4ever.wfdesc.scufl2.ROEvoSerializer;
 import uk.org.taverna.scufl2.api.common.NamedSet;
 import uk.org.taverna.scufl2.api.common.URITools;
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
+import uk.org.taverna.scufl2.api.core.Workflow;
 import uk.org.taverna.scufl2.api.io.WorkflowBundleIO;
 import uk.org.taverna.scufl2.api.io.WriterException;
 import uk.org.taverna.scufl2.rdfxml.RDFXMLReader;
@@ -133,7 +134,43 @@ public abstract class Wf2ROConverter {
         } catch (ROSRSException e) {
             LOG.error("Can't upload the link annotation", e);
         }
+        uploadNestedWorkflows(ro);
+    }
 
+    private void uploadNestedWorkflows(ResearchObject ro) throws IOException, ROSRSException, WriterException, ROException {
+        Workflow mainWf = wfbundle.getMainWorkflow();
+        try {
+            for (Workflow otherWf : wfbundle.getWorkflows()) {
+                if (otherWf == mainWf) {
+                   continue;
+                }
+                // Cheaky way to save out nested workflows (and any of their
+                // nested wfs, annotations and configurations).
+                //
+                // Note that this is not ideal, it will include lots of
+                // unreferenced workflows and configurations, but is easier than
+                // doing a recursive copy
+                wfbundle.setMainWorkflow(otherWf);
+                
+                // Try to extract the UUID
+                String id = Workflow.WORKFLOW_ROOT.relativize(otherWf.getIdentifier())
+                        .toASCIIString().replace("/", "");
+                UUID uuid;
+                try {
+                    uuid = UUID.fromString(id);
+                } catch (IllegalArgumentException ex) {
+                    // Fallback, generate a name UUID from the URL                
+                    uuid = UUIDTool.namespaceUUID(otherWf.getIdentifier());
+                }            
+                // A long, but unique name 
+                String name = otherWf.getName() + "-" + uuid;
+                addWorkflowBundle(ro, wfbundle, "workflows/components/" + name + ".wfbundle");
+            } 
+        } finally {
+            // Restore wfbundle main workflow in case it is used elsewhere
+            wfbundle.setMainWorkflow(mainWf);
+        }
+        
     }
 
 

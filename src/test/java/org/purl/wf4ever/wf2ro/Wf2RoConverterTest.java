@@ -8,6 +8,7 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.List;
 
 import org.junit.Test;
@@ -47,6 +48,7 @@ public class Wf2RoConverterTest {
 
     /** Workflow name, in src/test/resources. */
     private static final String HELLO_ANYONE_T2FLOW = "helloanyone.t2flow";
+    private static final String NESTING_T2FLOW = "nesting.t2flow";
 
 
     /**
@@ -56,7 +58,7 @@ public class Wf2RoConverterTest {
      *             any kind of conversion exception
      */
     @Test
-    public void testConvert()
+    public void convert()
             throws Exception {
         WorkflowBundleIO io = new WorkflowBundleIO();
         InputStream helloWorld = getClass().getClassLoader().getResourceAsStream(HELLO_ANYONE_T2FLOW);
@@ -73,6 +75,7 @@ public class Wf2RoConverterTest {
         // should aggregate the workflow, 2 annotations about it and 2 annotation bodies
         List<RDFNode> aggregatedResources = ro.listPropertyValues(ORE.aggregates).toList();
         //        System.out.println(aggregatedResources);
+        System.out.println(aggregatedResources);
         assertEquals("Correct number of aggregated resources", MockupWf2ROConverter.EXPECTED_RESOURCES.size()
                 + MockupWf2ROConverter.EXPECTED_ANNOTATIONS.size(), aggregatedResources.size());
         for (RDFNode node : aggregatedResources) {
@@ -90,6 +93,36 @@ public class Wf2RoConverterTest {
 
         checkHasWorkflowDefinition(converter);
         checkHasWorkflowAnnotations(converter);
+    }
+    
+    @Test
+    public void nestedWorkflows()
+            throws Exception {
+        WorkflowBundleIO io = new WorkflowBundleIO();
+        InputStream helloWorld = getClass().getClassLoader().getResourceAsStream(NESTING_T2FLOW);
+        WorkflowBundle wfbundle = io.readBundle(helloWorld, null);
+
+        MockupWf2ROConverter converter = new MockupWf2ROConverter(wfbundle, URI.create(NESTING_T2FLOW));
+        converter.convert();
+        
+        //        System.out.println(converter.getResources().keySet());
+        OntModel model = converter.createManifestModel();
+        Individual ro = model.getIndividual(MockupWf2ROConverter.RO_URI.toString());
+        assertNotNull("RO exists in the manifest", ro);
+        // should aggregate the workflow, 2 annotations about it and 2 annotation bodies
+//        List<RDFNode> aggregatedResources = ro.listPropertyValues(ORE.aggregates).toList();
+        //        System.out.println(aggregatedResources);        
+        List<String> NESTED_WORKFLOWS = Arrays.asList("Workflow2-a794fc8c-f3c6-4c80-a3d0-50f89100c0fc", 
+                "Workflow21-75f491bc-5e00-4b71-ab30-687756488304", 
+                "Workflow10-f27bd103-6978-4c3a-8ca3-7ca4ece71da5");
+        
+        // Each of the nested workflows should also be aggregated
+        for (String nested : NESTED_WORKFLOWS) { 
+            String uri = "http://example.org/ROs/ro1/workflows/components/" + nested + ".wfbundle";
+            Individual individual = model.getIndividual(uri);
+            assertNotNull("Could not find " + uri, individual); 
+            assertTrue(individual.hasRDFType(RO.Resource));
+        }
     }
 
 
