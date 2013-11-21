@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.io.ObjectInputStream.GetField;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
@@ -25,6 +26,7 @@ import org.openrdf.rio.RDFFormat;
 import org.purl.wf4ever.rosrs.client.Annotable;
 import org.purl.wf4ever.rosrs.client.Annotation;
 import org.purl.wf4ever.rosrs.client.Folder;
+import org.purl.wf4ever.rosrs.client.FolderEntry;
 import org.purl.wf4ever.rosrs.client.ResearchObject;
 import org.purl.wf4ever.rosrs.client.Resource;
 import org.purl.wf4ever.rosrs.client.exception.ROException;
@@ -41,8 +43,6 @@ import uk.org.taverna.scufl2.api.io.WriterException;
 import uk.org.taverna.scufl2.api.profiles.Profile;
 import uk.org.taverna.scufl2.rdfxml.RDFXMLReader;
 
-import antlr.ByteBuffer;
-
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.Property;
@@ -56,8 +56,6 @@ import com.hp.hpl.jena.rdf.model.Property;
  */
 public abstract class Wf2ROConverter {
 
-    private static final String FOLDER_WORKFLOWS_NESTED = "workflows/nested";
-
     /** text/turtle. */
     private static final String TEXT_TURTLE = "text/turtle";
 
@@ -66,8 +64,6 @@ public abstract class Wf2ROConverter {
 
     /** Logger. */
     private static final Logger LOG = Logger.getLogger(Wf2ROConverter.class);
-
-    private static final String FOLDER_SCRIPT = "config/scripts";
 
     /** Workflow bundle serializer/deserializer. */
     private static WorkflowBundleIO bundleIO = new WorkflowBundleIO();
@@ -153,6 +149,10 @@ public abstract class Wf2ROConverter {
     }
 
     private void uploadScripts(ResearchObject ro) throws IOException, ROSRSException, ROException {
+        Folder folder = getExtractScripts();
+        if (folder == null) {
+            return;
+        }
         for (Profile p : wfbundle.getProfiles()) {
             for (Configuration conf : p.getConfigurations()) {
                 String script = conf.getJson().path("script").asText();
@@ -160,17 +160,67 @@ public abstract class Wf2ROConverter {
                     // TODO: Also support ExternalTool command line
                     continue;
                 }
-                // Upload script
+                // Find unique identifier for script - we'll hash its content
                 String sha = utf8sha(script);
-                String name = conf.getName() + "-" + sha + ".txt";
                 
+                if (hasFolderEntryWithNameContaining(folder, sha)) {
+                    // Another script with the same hash exists - first one wins
+                    // TODO: Add more annotations about dct:hasPart or similar?
+                    continue;
+                }
+
+                // We'll use a slightly nicer name, include the sha hash
+                String name = conf.getName() + "-" + sha + ".txt";
+                URI slug = slugForFolder(ro, folder).resolve(name);                
+                // Upload script
                 ByteArrayInputStream scriptStream = new ByteArrayInputStream(script.getBytes(UTF8));
                 Resource uploadedScript = uploadAggregatedResource(ro, 
-                        FOLDER_SCRIPT + "/" + name, scriptStream, "text/plain");
-                addToFolder(ro, uploadedScript, FOLDER_SCRIPT, name);                    
+                         slug.toASCIIString(), scriptStream, "text/plain");
+                addToFolder(folder, uploadedScript, name);                    
                 addLinkAnnotation(ro, originalWfUri, uploadedScript, null);                    
             }
         }
+    }
+
+    private boolean hasFolderEntryWithNameContaining(Folder folder, String partialFilename) throws ROSRSException {
+        if (partialFilename.isEmpty()) {
+            return false;
+        }
+        if (! folder.isLoaded()) {
+            folder.load(false);            
+        }
+        for (FolderEntry entry : folder.getFolderEntries().values()) {
+            if (entry.getName().contains(partialFilename)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private URI slugForFolder(ResearchObject ro, Folder folder) {
+        URI slugBase = ro.getUri().relativize(folder.getUri());
+        if (slugBase.isAbsolute()) {
+            // no common base
+            slugBase = URI.create("");
+        } else if (! slugBase.getPath().endsWith("/")) {
+            // ensure ends with /
+            slugBase = slugBase.resolve(slugBase.getPath() + "/");                    
+        }
+        return slugBase;
+    }
+
+    
+    
+    private Resource getFolderEntry(Folder folder, String entryName) throws ROSRSException {
+        if (! folder.isLoaded()) {
+            folder.load(false);            
+        }
+        for (FolderEntry entry : folder.getFolderEntries().values()) {
+            if (entry.getName().equals(entryName)) {
+                return entry.getResource();
+            }
+        }
+        return null;
     }
 
     private static Charset UTF8 = Charset.forName("UTF-8");
@@ -189,6 +239,10 @@ public abstract class Wf2ROConverter {
 
 
     private void uploadNestedWorkflows(ResearchObject ro) throws IOException, ROSRSException, WriterException, ROException {
+        Folder folder = getExtractNested();
+        if (folder == null) {
+            return;
+        }
         Workflow mainWf = wfbundle.getMainWorkflow();
         try {
             for (Workflow otherWf : wfbundle.getWorkflows()) {
@@ -213,12 +267,17 @@ public abstract class Wf2ROConverter {
                     // Fallback, generate a name UUID from the URL                
                     uuid = UUIDTool.namespaceUUID(otherWf.getIdentifier());
                 }            
-                // A long, but unique name 
-                String name = otherWf.getName() + "-" + uuid;
-                String fileName = name + ".wfbundle";
-                Resource nestedWf = addWorkflowBundle(ro, wfbundle, FOLDER_WORKFLOWS_NESTED + "/" + fileName);
-                addToFolder(ro, nestedWf, FOLDER_WORKFLOWS_NESTED, fileName);
                 
+                if (hasFolderEntryWithNameContaining(folder, uuid.toString())) {
+                    // Another workflow with the same id exists - first one wins
+                    continue;
+                }
+                
+                // A long, but unique name 
+                String name = otherWf.getName() + "-" + uuid + ".wfbundle";
+                URI slug = slugForFolder(ro, folder).resolve(name);
+                Resource nestedWf = addWorkflowBundle(ro, wfbundle, slug.toString());
+                addToFolder(folder, nestedWf, name);                
                 addLinkAnnotation(ro, originalWfUri, nestedWf, otherWf.getIdentifier());
                 
             } 
@@ -229,58 +288,12 @@ public abstract class Wf2ROConverter {
         
     }
 
-
-    private void addToFolder(ResearchObject ro, Resource nestedWf, String folderPath, String fileName) throws ROSRSException, ROException {
-        Folder folder = getOrCreateFolder(ro, folderPath);
-        
-        folder.addEntry(nestedWf, fileName);
-    }
-
-
-    private Folder getOrCreateFolder(ResearchObject ro, String folderPath) throws ROSRSException, ROException {
-        if (! ro.isLoaded()) {
-            ro.load();
-        }
-        List<String> folderPaths = Arrays.asList(folderPath.split("/"));
-        String folderName = folderPaths.get(0);
-        Folder folder = getSubFolder(ro.getRootFolders(), folderName);
-        if (folder == null) {
-            folder = ro.createFolder(folderName);
-        }
-        return getOrCreateFolder(folder, folderPaths.subList(1, folderPaths.size()));        
-    }
-
-
-    private Folder getOrCreateFolder(Folder folder, List<String> folderPaths) throws ROSRSException, ROException {
-        if (folderPaths.isEmpty()) {
-            return folder;
-        }
-        String subFolderName = folderPaths.get(0);
+    private void addToFolder(Folder folder, Resource resource, String entryName) throws ROSRSException, ROException {
         if (! folder.isLoaded()) {
             folder.load(false);
         }
-        Folder sub = getSubFolder(folder.getSubfolders(), subFolderName);
-        if (sub == null) {
-            sub = (Folder) folder.addSubFolder(subFolderName).getResource();
-        }
-        List<String> remainingFolderPaths = folderPaths.subList(1, folderPaths.size());
-        return getOrCreateFolder(sub, remainingFolderPaths);
+        folder.addEntry(resource, entryName);
     }
-
-
-    private Folder getSubFolder(List<Folder> subFolders, String folderName)
-            throws ROSRSException, ROException {
-        folderName = folderName.replace("/", "");
-        for (Folder sub : subFolders) {
-            System.out.println("Checking " + sub.getName() + " == " + folderName);
-            if (folderName.equals(sub.getName().replace("/", ""))) {
-                System.out.println("OK!");
-                return sub;
-            }
-        }
-        return null;
-    }
-
 
     /**
      * Extract workflow UUID.
