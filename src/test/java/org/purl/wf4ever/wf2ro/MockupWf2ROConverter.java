@@ -15,6 +15,7 @@ import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.log4j.Logger;
 import org.purl.wf4ever.rosrs.client.Annotable;
 import org.purl.wf4ever.rosrs.client.Annotation;
+import org.purl.wf4ever.rosrs.client.Folder;
 import org.purl.wf4ever.rosrs.client.ResearchObject;
 import org.purl.wf4ever.rosrs.client.exception.ROException;
 import org.purl.wf4ever.rosrs.client.exception.ROSRSException;
@@ -59,6 +60,8 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
 
     /** Used for ann bodies. */
     private int annCnt = 0;
+
+    private ResearchObject ro;
 
     /** Resources expected to be generated. */
     public static final List<String> EXPECTED_RESOURCES = Arrays.asList(
@@ -163,9 +166,16 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
 
     @Override
     protected ResearchObject createResearchObject(UUID wfUUID) {
-        return new ResearchObject(RO_URI, null);
+        ro = new ResearchObject(RO_URI, null);
+        return ro;
     }
 
+    protected ResearchObject getRO() {
+        if (ro == null) {
+            return createResearchObject(UUID.randomUUID());
+        }
+        return ro;
+    }
 
     @Override
     protected org.purl.wf4ever.rosrs.client.Resource addWorkflowBundle(ResearchObject ro,
@@ -217,6 +227,30 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
         Individual res2 = manifest.createIndividual(body.toString(), RO.Resource);
         roR.addProperty(ORE.aggregates, res2);
         return new Annotation(ro, ann, null, Collections.singleton(body), null, null);
+    }
+
+
+    @Override
+    public Folder getExtractMain() {        
+        return null;
+    }
+
+
+    @Override
+    public Folder getExtractNested() {
+        return null;
+    }
+
+
+    @Override
+    public Folder getExtractScripts() {
+        return null;
+    }
+
+
+    @Override
+    public Folder getExtractServices() {
+        return null;
     }
 
 }
