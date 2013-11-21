@@ -264,7 +264,7 @@ public class RestApiTest extends JerseyTest {
             webResource = resource().path("wf-ro/");
         }
 
-        JobConfig config = new JobConfig(WF_URI, TAVERNA_FORMAT, RO_URI_NEW, TOKEN);
+        JobConfig config = new JobConfig(WF_URI, TAVERNA_FORMAT, RO_URI_NEW, TOKEN, new JobExtractFolders());
 
         ClientResponse response = webResource.path("jobs").type(MediaType.APPLICATION_JSON_TYPE)
                 .post(ClientResponse.class, config);
@@ -441,7 +441,7 @@ public class RestApiTest extends JerseyTest {
             webResource = resource().path("wf-ro/");
         }
 
-        JobConfig config = new JobConfig(WF_URI, TAVERNA_FORMAT, URI.create("http://this_is_an_incorrect_uri"), TOKEN);
+        JobConfig config = new JobConfig(WF_URI, TAVERNA_FORMAT, URI.create("http://this_is_an_incorrect_uri"), TOKEN, new JobExtractFolders());
 
         ClientResponse response = webResource.path("jobs").type(MediaType.APPLICATION_JSON_TYPE)
                 .post(ClientResponse.class, config);
