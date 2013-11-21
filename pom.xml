@@ -7,8 +7,8 @@
 	<name>Wf-RO transformation service</name>
 	<description>Convert a t2flow workflow to an RO</description>
 	<properties>
-		<scufl2.version>0.13.0</scufl2.version>
-		<scufl2-wfdesc.version>0.3.2</scufl2-wfdesc.version>
+		<scufl2.version>0.13.1</scufl2.version>
+		<scufl2-wfdesc.version>0.3.3</scufl2-wfdesc.version>
         <!--  TODO: Why does this not work with 2.11.0? -->
         <jena.version>2.10.1</jena.version>
 		<jersey.version>1.15</jersey.version>
