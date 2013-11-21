@@ -121,6 +121,13 @@ public abstract class Wf2ROConverter {
         String wfname = wfbundle.getMainWorkflow().getName() + ".wfbundle";
         ResearchObject ro = createResearchObject(wfUUID);
         Resource wfbundleAggregated = addWorkflowBundle(ro, wfbundle, wfname);
+        Folder mainFolder = getExtractMain();
+        if (mainFolder != null) {
+            // Add to the main folder
+            mainFolder.addEntry(wfbundleAggregated, wfname);
+            // TODO: Handle conflicts if already exists
+        }
+        
         resourcesAdded.add(wfbundleAggregated.getUri());
         try {
             extractAnnotations(ro, wfbundleAggregated, wfbundle, resourcesAdded);
