@@ -3,6 +3,7 @@ package org.purl.wf4ever.wf2ro;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -12,7 +13,9 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.junit.Test;
+import org.mockito.Mock;
 import org.openrdf.rio.RDFFormat;
+import org.purl.wf4ever.rosrs.client.Folder;
 
 import pl.psnc.dl.wf4ever.vocabulary.ORE;
 import pl.psnc.dl.wf4ever.vocabulary.RO;
@@ -103,6 +106,9 @@ public class Wf2RoConverterTest {
         WorkflowBundle wfbundle = io.readBundle(helloWorld, null);
 
         MockupWf2ROConverter converter = new MockupWf2ROConverter(wfbundle, URI.create(NESTING_T2FLOW));
+        converter.extractNested = mock(Folder.class);
+        URI NESTED_FOLDER = MockupWf2ROConverter.RO_URI.resolve("wfs/nested/");
+        when(converter.extractNested.getUri()).thenReturn(NESTED_FOLDER);
         converter.convert();
         
         //        System.out.println(converter.getResources().keySet());
@@ -118,7 +124,7 @@ public class Wf2RoConverterTest {
         
         // Each of the nested workflows should also be aggregated
         for (String nested : NESTED_WORKFLOWS) { 
-            String uri = "http://example.org/ROs/ro1/workflows/components/" + nested + ".wfbundle";
+            String uri = NESTED_FOLDER + nested + ".wfbundle";
             Individual individual = model.getIndividual(uri);
             assertNotNull("Could not find " + uri, individual); 
             assertTrue(individual.hasRDFType(RO.Resource));

@@ -63,6 +63,14 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
 
     private ResearchObject ro;
 
+    protected Folder extractMain;
+
+    protected Folder extractNested;
+
+    protected Folder extractScripts;
+
+    protected Folder extractServices;
+
     /** Resources expected to be generated. */
     public static final List<String> EXPECTED_RESOURCES = Arrays.asList(
         "http://example.org/ROs/ro1/Hello_Anyone.wfbundle", "http://example.org/ROs/ro1/.ro/body-wf-1",
@@ -232,25 +240,25 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
 
     @Override
     public Folder getExtractMain() {        
-        return null;
+        return extractMain;
     }
 
 
     @Override
     public Folder getExtractNested() {
-        return null;
+        return extractNested;
     }
 
 
     @Override
     public Folder getExtractScripts() {
-        return null;
+        return extractScripts;
     }
 
 
     @Override
     public Folder getExtractServices() {
-        return null;
+        return extractServices;
     }
 
 }
