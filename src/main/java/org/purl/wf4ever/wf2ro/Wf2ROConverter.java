@@ -10,15 +10,21 @@ import java.io.InputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.net.URI;
+import java.nio.charset.Charset;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.commons.codec.binary.Hex;
 import org.apache.log4j.Logger;
 import org.openrdf.rio.RDFFormat;
 import org.purl.wf4ever.rosrs.client.Annotable;
 import org.purl.wf4ever.rosrs.client.Annotation;
+import org.purl.wf4ever.rosrs.client.Folder;
 import org.purl.wf4ever.rosrs.client.ResearchObject;
 import org.purl.wf4ever.rosrs.client.Resource;
 import org.purl.wf4ever.rosrs.client.exception.ROException;
@@ -27,11 +33,15 @@ import org.purl.wf4ever.wfdesc.scufl2.ROEvoSerializer;
 
 import uk.org.taverna.scufl2.api.common.NamedSet;
 import uk.org.taverna.scufl2.api.common.URITools;
+import uk.org.taverna.scufl2.api.configurations.Configuration;
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
 import uk.org.taverna.scufl2.api.core.Workflow;
 import uk.org.taverna.scufl2.api.io.WorkflowBundleIO;
 import uk.org.taverna.scufl2.api.io.WriterException;
+import uk.org.taverna.scufl2.api.profiles.Profile;
 import uk.org.taverna.scufl2.rdfxml.RDFXMLReader;
+
+import antlr.ByteBuffer;
 
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
@@ -46,6 +56,8 @@ import com.hp.hpl.jena.rdf.model.Property;
  */
 public abstract class Wf2ROConverter {
 
+    private static final String FOLDER_WORKFLOWS_NESTED = "workflows/nested";
+
     /** text/turtle. */
     private static final String TEXT_TURTLE = "text/turtle";
 
@@ -54,6 +66,8 @@ public abstract class Wf2ROConverter {
 
     /** Logger. */
     private static final Logger LOG = Logger.getLogger(Wf2ROConverter.class);
+
+    private static final String FOLDER_SCRIPT = "config/scripts";
 
     /** Workflow bundle serializer/deserializer. */
     private static WorkflowBundleIO bundleIO = new WorkflowBundleIO();
@@ -135,7 +149,44 @@ public abstract class Wf2ROConverter {
             LOG.error("Can't upload the link annotation", e);
         }
         uploadNestedWorkflows(ro);
+        uploadScripts(ro);
     }
+
+    private void uploadScripts(ResearchObject ro) throws IOException, ROSRSException, ROException {
+        for (Profile p : wfbundle.getProfiles()) {
+            for (Configuration conf : p.getConfigurations()) {
+                String script = conf.getJson().path("script").asText();
+                if (script.isEmpty()) {
+                    // TODO: Also support ExternalTool command line
+                    continue;
+                }
+                // Upload script
+                String sha = utf8sha(script);
+                String name = conf.getName() + "-" + sha + ".txt";
+                
+                ByteArrayInputStream scriptStream = new ByteArrayInputStream(script.getBytes(UTF8));
+                Resource uploadedScript = uploadAggregatedResource(ro, 
+                        FOLDER_SCRIPT + "/" + name, scriptStream, "text/plain");
+                addToFolder(ro, uploadedScript, FOLDER_SCRIPT, name);                    
+                addLinkAnnotation(ro, originalWfUri, uploadedScript, null);                    
+            }
+        }
+    }
+
+    private static Charset UTF8 = Charset.forName("UTF-8");
+
+    private String utf8sha(String script) {
+        MessageDigest sha1;
+        try {
+            sha1 = MessageDigest.getInstance("SHA1");
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+        sha1.update(script.getBytes(UTF8));
+        byte[] digest = sha1.digest();
+        return Hex.encodeHexString(digest);
+    }
+
 
     private void uploadNestedWorkflows(ResearchObject ro) throws IOException, ROSRSException, WriterException, ROException {
         Workflow mainWf = wfbundle.getMainWorkflow();
@@ -164,13 +215,70 @@ public abstract class Wf2ROConverter {
                 }            
                 // A long, but unique name 
                 String name = otherWf.getName() + "-" + uuid;
-                addWorkflowBundle(ro, wfbundle, "workflows/components/" + name + ".wfbundle");
+                String fileName = name + ".wfbundle";
+                Resource nestedWf = addWorkflowBundle(ro, wfbundle, FOLDER_WORKFLOWS_NESTED + "/" + fileName);
+                addToFolder(ro, nestedWf, FOLDER_WORKFLOWS_NESTED, fileName);
+                
+                addLinkAnnotation(ro, originalWfUri, nestedWf, otherWf.getIdentifier());
+                
             } 
         } finally {
             // Restore wfbundle main workflow in case it is used elsewhere
             wfbundle.setMainWorkflow(mainWf);
         }
         
+    }
+
+
+    private void addToFolder(ResearchObject ro, Resource nestedWf, String folderPath, String fileName) throws ROSRSException, ROException {
+        Folder folder = getOrCreateFolder(ro, folderPath);
+        
+        folder.addEntry(nestedWf, fileName);
+    }
+
+
+    private Folder getOrCreateFolder(ResearchObject ro, String folderPath) throws ROSRSException, ROException {
+        if (! ro.isLoaded()) {
+            ro.load();
+        }
+        List<String> folderPaths = Arrays.asList(folderPath.split("/"));
+        String folderName = folderPaths.get(0);
+        Folder folder = getSubFolder(ro.getRootFolders(), folderName);
+        if (folder == null) {
+            folder = ro.createFolder(folderName);
+        }
+        return getOrCreateFolder(folder, folderPaths.subList(1, folderPaths.size()));        
+    }
+
+
+    private Folder getOrCreateFolder(Folder folder, List<String> folderPaths) throws ROSRSException, ROException {
+        if (folderPaths.isEmpty()) {
+            return folder;
+        }
+        String subFolderName = folderPaths.get(0);
+        if (! folder.isLoaded()) {
+            folder.load(false);
+        }
+        Folder sub = getSubFolder(folder.getSubfolders(), subFolderName);
+        if (sub == null) {
+            sub = (Folder) folder.addSubFolder(subFolderName).getResource();
+        }
+        List<String> remainingFolderPaths = folderPaths.subList(1, folderPaths.size());
+        return getOrCreateFolder(sub, remainingFolderPaths);
+    }
+
+
+    private Folder getSubFolder(List<Folder> subFolders, String folderName)
+            throws ROSRSException, ROException {
+        folderName = folderName.replace("/", "");
+        for (Folder sub : subFolders) {
+            System.out.println("Checking " + sub.getName() + " == " + folderName);
+            if (folderName.equals(sub.getName().replace("/", ""))) {
+                System.out.println("OK!");
+                return sub;
+            }
+        }
+        return null;
     }
 
 
@@ -396,12 +504,18 @@ public abstract class Wf2ROConverter {
         Model model = ModelFactory.createDefaultModel();
         com.hp.hpl.jena.rdf.model.Resource originalR = model.createResource(originalWfUri.toString());
         com.hp.hpl.jena.rdf.model.Resource wfbundleR = model.createResource(wfbundleAggregated.getUri().toString());
-        com.hp.hpl.jena.rdf.model.Resource mainwfR = model.createResource(workflowIdentifier.toString());
         //FIXME move that property to rodl-common
-        Property link = model.createProperty("http://purl.org/wf4ever/wfdesc#hasWorkflowDefinition");
-        model.add(mainwfR, link, wfbundleR);
-        Property link2 = model.createProperty("http://purl.org/pav/importedFrom");
-        model.add(wfbundleR, link2, originalR);
+        Property importedFrom = model.createProperty("http://purl.org/pav/importedFrom");
+        Property derivedFrom = model.createProperty("http://purl.org/pav/derivedFrom");
+
+        if (workflowIdentifier != null) {
+            model.add(wfbundleR, importedFrom, originalR);
+            Property hasWorkflowDef = model.createProperty("http://purl.org/wf4ever/wfdesc#hasWorkflowDefinition");
+            com.hp.hpl.jena.rdf.model.Resource mainwfR = model.createResource(workflowIdentifier.toString());
+            model.add(mainwfR, hasWorkflowDef, wfbundleR);
+        } else {
+            model.add(wfbundleR, derivedFrom, originalR);            
+        }
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         model.write(out, "TURTLE");
         ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
@@ -481,5 +595,31 @@ public abstract class Wf2ROConverter {
     public List<URI> getResourcesAdded() {
         return resourcesAdded;
     }
+    
+    
+    /**
+     * @return RO Folder where to extract main workflow, or
+     *         <code>null</code> to not add extracted main workflow to any
+     *         folder (the main workflow is still extracted)
+     */
+    public abstract Folder getExtractMain();
+
+    /**
+     * @return RO Folder where to extract nested workflows, or
+     *         <code>null</code> to not extract.
+     */
+    public abstract Folder getExtractNested();
+
+    /**
+     * @return RO Folder where to extract scripts, or <code>null</code>
+     *         to not extract.
+     */
+    public abstract Folder getExtractScripts();
+
+    /**
+     * @return RO Folder where to extract services, or <code>null</code>
+     *         to not extract
+     */
+    public abstract Folder getExtractServices();
 
 }

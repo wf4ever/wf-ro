@@ -13,6 +13,7 @@ import java.util.UUID;
 import org.apache.log4j.Logger;
 import org.purl.wf4ever.rosrs.client.Annotable;
 import org.purl.wf4ever.rosrs.client.Annotation;
+import org.purl.wf4ever.rosrs.client.Folder;
 import org.purl.wf4ever.rosrs.client.ROSRService;
 import org.purl.wf4ever.rosrs.client.ResearchObject;
 import org.purl.wf4ever.rosrs.client.Resource;
@@ -37,6 +38,34 @@ public class RodlConverter extends Wf2ROConverter {
     /** RODL client. */
     private final ROSRService rosrs;
 
+    /**
+     * URI of RO Folder where to extract main workflow, or <code>null</code> to
+     * not add extracted main workflow to any folder (the main workflow is still
+     * extracted)
+     */
+    private URI extractMain;
+
+    /**
+     * URI of RO Folder where to extract nested workflows, or <code>null</code>
+     * to not extract.
+     */
+    private URI extractNested;
+    
+
+    /**
+     * URI of RO Folder where to extract scripts, or <code>null</code> to not
+     * extract.
+     */
+    private URI extractScripts;
+
+    /**
+     * URI of RO Folder where to extract services, or <code>null</code> to not
+     * extract
+     */
+    private URI extractServices;
+
+    private ResearchObject ro;
+
 
     /**
      * Constructor.
@@ -49,9 +78,25 @@ public class RodlConverter extends Wf2ROConverter {
      *            research object URI, will be created if doesn't exist
      * @param rodlToken
      *            the RODL access token for updating the RO
-     */
-    public RodlConverter(WorkflowBundle wfbundle, URI wfUri, URI roURI, String rodlToken) {
+     * @param extractMain
+     *            URI of RO Folder where to extract main workflow, or null to
+     *            not add extracted main workflow to any folder (the main
+     *            workflow is still extracted)
+     * @param extractNested
+     *            URI of RO Folder where to extract nested workflows, or null to
+     *            not extract.
+     * @param extractScripts
+     *            URI of RO Folder where to extract scripts, or null to not
+     *            extract.
+     * @param extractServices
+     *            URI of RO Folder where to extract services, or null to not
+     *            extract.     */
+    public RodlConverter(WorkflowBundle wfbundle, URI wfUri, URI roURI, String rodlToken, URI extractMain, URI extractNested, URI extractScripts, URI extractServices) {
         super(wfbundle, wfUri);
+        this.extractMain = extractMain;
+        this.extractNested = extractNested;
+        this.extractScripts = extractScripts;
+        this.extractServices = extractServices;
         URI rodlURI = roURI.resolve(".."); // zrobic z tego metode i stala
         this.rosrs = new ROSRService(rodlURI, rodlToken);
         this.roURI = roURI;
@@ -121,6 +166,37 @@ public class RodlConverter extends Wf2ROConverter {
         return target.annotate(bodyPath, in, contentType);
     }
 
+    @Override
+    public Folder getExtractMain() {
+        if (extractMain == null) {
+            return null;
+        }
+        return getResearchObject().getFolder(extractMain);
+    }
+    
+    @Override
+    public Folder getExtractNested() {
+        if (extractNested == null) {
+            return null;
+        }
+        return getResearchObject().getFolder(extractNested);
+    }
+    
+    @Override
+    public Folder getExtractScripts() {
+        if (extractScripts == null) {
+            return null;
+        }
+        return getResearchObject().getFolder(extractScripts);
+    }
+    
+    @Override
+    public Folder getExtractServices() {
+        if (extractServices == null) {
+            return null;
+        }
+        return getResearchObject().getFolder(extractServices);
+    }
 
     /**
      * Generate a path for an annotation body of a resource. The template is ["ro"|resource_name] + "-" + random_string.
@@ -137,4 +213,5 @@ public class RodlConverter extends Wf2ROConverter {
         return ".ro/" + targetName + "-" + randomBit + ".ttl";
     }
 
+    
 }
