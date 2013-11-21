@@ -64,22 +64,48 @@ public class RodlConverter extends Wf2ROConverter {
         try {
             rosrs.getResourceHead(roURI);
             LOG.debug("Research object " + roURI + " returned status 200 OK, will use this one");
-            return new ResearchObject(roURI, rosrs);
+            return getResearchObject();
         } catch (ROSRSException e) {
             LOG.debug("Research object " + roURI + " returned status " + e.getStatus() + ", will create a new one");
-            Path name = Paths.get(roURI.getPath()).getFileName();
-            if (name == null) {
-                throw new IllegalStateException("Can't extract the slug from URI " + roURI);
-            }
-            String slug = name.toString();
+            
+            String slug = uriToSlug(roURI);
+            
+            if (slug.isEmpty()) {
+                slug = wfUUID.toString();
+            }            
             if (slug.endsWith("/")) {
                 slug = slug.substring(0, slug.length() - 1);
             }
-            return ResearchObject.create(rosrs, slug);
+            ro = ResearchObject.create(rosrs, slug);
+            return ro;
         }
     }
 
 
+    protected static String uriToSlug(URI uri) {
+        // Remove any trailing /'s
+        String path = uri.getPath().replaceAll("/+$", "");
+        
+        // the "slug" is the name in the last element, so discard anything before
+        String slug = path.replaceAll(".*/+", "");
+        return slug;
+    }
+
+    protected ResearchObject getResearchObject() {
+        if (ro == null) {
+            ro = new ResearchObject(roURI, rosrs);
+        }
+        if (! ro.isLoaded()) {
+            try {
+                ro.load();
+            } catch (ROSRSException|ROException e) {
+                LOG.debug("Can't load RO from URI " + roURI, e);
+                throw new IllegalStateException("Can't load RO from URI " + roURI, e);            
+            }
+        }        
+        return ro;
+    }
+        
     @Override
     protected Resource uploadAggregatedResource(ResearchObject ro, String path, InputStream in, String contentType)
             throws IOException, ROSRSException, ROException {
