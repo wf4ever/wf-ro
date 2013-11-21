@@ -66,11 +66,6 @@ public class Job extends Thread {
     private URI ro;
 
 
-    public String getReason() {
-        return reason;
-    }
-
-
     /** RODL access token. */
     private String token;
 
@@ -82,6 +77,9 @@ public class Job extends Thread {
 
     /** Reason for the state, i.e. exception message. */
     private String reason;
+
+    /** RO Folders where to extract workflows, scripts and services */
+    private JobExtractFolders extract;
 
 
     /**
@@ -99,19 +97,22 @@ public class Job extends Thread {
      *            RODL access token
      * @param container
      *            the object that created this job
+     * @param extract
+     *            RO Folders where to extract workflows, scripts and services
      */
-    public Job(UUID jobUUID, URI resource, String format, URI ro, String token, JobsContainer container) {
+    public Job(UUID jobUUID, URI resource, String format, URI ro, String token, JobsContainer container, JobExtractFolders extract) {
         this.uuid = jobUUID;
         this.resource = resource;
         this.format = format;
         this.ro = ro;
         this.token = token;
         this.container = container;
+        this.extract = extract;
         state = State.RUNNING;
 
         LOG.debug(String.format("Created a new job:\n\tuuid = %s\n\tresource = %s\n\tformat = %s\n\tro=%s\t\n",
             jobUUID, resource, format, ro));
-
+        
         setDaemon(true);
     }
 
@@ -121,13 +122,15 @@ public class Job extends Thread {
         WorkflowBundleIO io = new WorkflowBundleIO();
         try {
             WorkflowBundle wfbundle = io.readBundle(resource.toURL(), format.toString());
-            converter = new RodlConverter(wfbundle, resource, ro, this.token);
+            converter = new RodlConverter(wfbundle, resource, ro, this.token,
+                    extract.getMain(), extract.getNested(), extract.getScripts(),
+                    extract.getServices());
             converter.convert();
             state = State.DONE;
         } catch (ReaderException | IOException e) {
-            LOG.error("Can't download the workflow", e);
+            LOG.error("Can't read the workflow " + resource + " as " + format, e);
             state = State.INVALID_RESOURCE;
-            reason = "Can't download the workflow: " + e.getMessage();
+            reason = "Can't read the workflow: " + e.getMessage();
         } catch (ROSRSException e) {
             LOG.error("ROSRS exception", e);
             state = State.RUNTIME_ERROR;
@@ -148,18 +151,19 @@ public class Job extends Thread {
         return uuid;
     }
 
-
     public State getJobState() {
         return state;
     }
 
-
     public JobStatus getJobStatus() {
-        return new JobStatus(resource, format, ro, state, converter != null ? converter.getResourcesAdded() : null,
+        return new JobStatus(resource, format, extract, ro, state, converter != null ? converter.getResourcesAdded() : null,
                 reason);
     }
-
-
+    
+    public String getReason() {
+        return reason;
+    }
+    
     /**
      * Cancel the job. The job is aborted but not undone.
      */
@@ -168,5 +172,7 @@ public class Job extends Thread {
         this.interrupt();
         this.state = State.CANCELLED;
     }
+    
+    
 
 }

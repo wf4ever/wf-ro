@@ -34,6 +34,8 @@ public class JobStatus {
     /** reason for the status, i.e. exception message. */
     private String reason;
 
+    private JobExtractFolders extract;
+
 
     /**
      * Default empty constructor.
@@ -50,6 +52,8 @@ public class JobStatus {
      *            workflow URI
      * @param format
      *            workflow format URI
+     * @param extract
+     *            Which resources to extract to which folders
      * @param ro
      *            RO URI
      * @param state
@@ -59,10 +63,11 @@ public class JobStatus {
      * @param reason
      *            reason for the status, i.e. exception message
      */
-    public JobStatus(URI resource, String format, URI ro, State state, List<URI> added, String reason) {
+    public JobStatus(URI resource, String format, JobExtractFolders extract, URI ro, State state, List<URI> added, String reason) {
         super();
         this.resource = resource;
         this.format = format;
+        this.setExtract(extract);
         this.ro = ro;
         this.status = state;
         this.added = added;
@@ -127,6 +132,16 @@ public class JobStatus {
 
     public void setReason(String reason) {
         this.reason = reason;
+    }
+
+
+    public JobExtractFolders getExtract() {
+        return extract;
+    }
+
+
+    public void setExtract(JobExtractFolders extract) {
+        this.extract = extract;
     }
 
 }

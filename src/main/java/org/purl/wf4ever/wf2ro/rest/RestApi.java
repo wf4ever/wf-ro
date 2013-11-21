@@ -77,16 +77,36 @@ public class RestApi implements JobsContainer {
      *            RO URI
      * @param token
      *            RODL access token
+     * @param extract_main
+     *            URI of RO Folder where to extract main workflow, or null to
+     *            not add extracted main workflow to any folder (the main
+     *            workflow is still extracted)
+     * @param extract_nested
+     *            URI of RO Folder where to extract nested workflows, or null to
+     *            not extract.
+     * @param extract_scripts
+     *            URI of RO Folder where to extract scripts, or null to not
+     *            extract.
+     * @param extract_services
+     *            URI of RO Folder where to extract services, or null to not
+     *            extract.
      * @return 201 Created
      * @throws BadRequestException
      *             the incoming parameters are incorrect
      */
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
-    public Response createJobMultipartForm(@FormDataParam("resource") URI resourceURI,
-            @FormDataParam("format") String format, @FormDataParam("ro") URI roURI, @FormDataParam("token") String token)
+    public Response createJobMultipartForm(
+            @FormDataParam("resource") URI resourceURI,
+            @FormDataParam("format") String format,
+            @FormDataParam("ro") URI roURI, 
+            @FormDataParam("token") String token,            
+            @FormDataParam("extract_main") URI extract_main,
+            @FormDataParam("extract_nested") URI extract_nested,
+            @FormDataParam("extract_scripts") URI extract_scripts,
+            @FormDataParam("extract_services") URI extract_services)
             throws BadRequestException {
-        return createJob(resourceURI, format, roURI, token);
+        return createJob(resourceURI, format, roURI, token, new JobExtractFolders(extract_main, extract_nested, extract_scripts, extract_services));
     }
 
 
@@ -101,16 +121,36 @@ public class RestApi implements JobsContainer {
      *            RO URI
      * @param token
      *            RODL access token
+     * @param extract_main
+     *            URI of RO Folder where to extract main workflow, or null to
+     *            not add extracted main workflow to any folder (the main
+     *            workflow is still extracted)
+     * @param extract_nested
+     *            URI of RO Folder where to extract nested workflows, or null to
+     *            not extract.
+     * @param extract_scripts
+     *            URI of RO Folder where to extract scripts, or null to not
+     *            extract.
+     * @param extract_services
+     *            URI of RO Folder where to extract services, or null to not
+     *            extract.
      * @return 201 Created
      * @throws BadRequestException
      *             the incoming parameters are incorrect
      */
     @POST
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response createJobForm(@FormParam("resource") URI resourceURI, @FormParam("format") String formatURI,
-            @FormParam("ro") URI roURI, @FormParam("token") String token)
+    public Response createJobForm(
+            @FormParam("resource") URI resourceURI,
+            @FormParam("format") String formatURI, 
+            @FormParam("ro") URI roURI,
+            @FormParam("token") String token,
+            @FormParam("extract_main") URI extract_main,
+            @FormParam("extract_nested") URI extract_nested,
+            @FormParam("extract_scripts") URI extract_scripts,
+            @FormParam("extract_services") URI extract_services)
             throws BadRequestException {
-        return createJob(resourceURI, formatURI, roURI, token);
+        return createJob(resourceURI, formatURI, roURI, token, new JobExtractFolders(extract_main, extract_nested, extract_scripts, extract_services));
     }
 
 
@@ -128,7 +168,7 @@ public class RestApi implements JobsContainer {
     @Consumes(MediaType.APPLICATION_JSON)
     public Response createJobJson(JobConfig config)
             throws BadRequestException {
-        return createJob(config.getResource(), config.getFormat(), config.getRo(), config.getToken());
+        return createJob(config.getResource(), config.getFormat(), config.getRo(), config.getToken(), config.getExtract());
     }
 
 
@@ -143,11 +183,13 @@ public class RestApi implements JobsContainer {
      *            RO URI
      * @param token
      *            RODL access token
+     * @param extract
+     *            RO Folders where to extract workflows, scripts and services
      * @return 201 Created
      * @throws BadRequestException
      *             the incoming parameters are incorrect
      */
-    private Response createJob(URI resourceURI, String format, URI roURI, String token)
+    private Response createJob(URI resourceURI, String format, URI roURI, String token, JobExtractFolders extract)
             throws BadRequestException {
         if (jobs.size() >= MAX_JOBS) {
             return Response.status(Status.SERVICE_UNAVAILABLE).build();
@@ -163,7 +205,7 @@ public class RestApi implements JobsContainer {
         }
         UUID jobUUID = UUID.randomUUID();
         URI jobURI = uriInfo.getAbsolutePathBuilder().path(jobUUID.toString()).build();
-        Job job = new Job(jobUUID, resourceURI, format, roURI, token, this);
+        Job job = new Job(jobUUID, resourceURI, format, roURI, token, this, extract);
         jobs.put(jobUUID, job);
         job.start();
         return Response.created(jobURI).build();
