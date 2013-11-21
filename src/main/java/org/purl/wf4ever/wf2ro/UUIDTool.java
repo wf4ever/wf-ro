@@ -8,8 +8,9 @@ import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
 
 /** 
- * Additional UUID methods
+ * Additional methods for {@link UUID}.
  * 
+ * @author Stian Soiland-Reyes
  * 
  * See http://www.ietf.org/rfc/rfc4122.txt */
 public class UUIDTool {
