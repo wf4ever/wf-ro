@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
-import java.io.ObjectInputStream.GetField;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
@@ -43,7 +42,6 @@ import uk.org.taverna.scufl2.api.io.WriterException;
 import uk.org.taverna.scufl2.api.profiles.Profile;
 import uk.org.taverna.scufl2.rdfxml.RDFXMLReader;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.Property;
@@ -83,8 +81,7 @@ public abstract class Wf2ROConverter {
 
     /** The original workflow URI. */
     protected URI originalWfUri;
-
-
+    
     /**
      * The constructor.
      * 
@@ -208,7 +205,7 @@ public abstract class Wf2ROConverter {
                 }
                 if (ws.isEmpty()) {
                     ws = conf.getJson().path("request").path("absoluteURITemplate").asText();
-                    ws = ws.replaceAll("{.*", "");
+                    ws = ws.replaceAll("\\{.*", "");
                 } 
                 if (ws.isEmpty()) {
                     continue;
@@ -245,6 +242,10 @@ public abstract class Wf2ROConverter {
             folder.load(false);            
         }
         for (FolderEntry entry : folder.getFolderEntries().values()) {
+            if (entry.getName() == null) {
+                LOG.warn("No name for folder entry of " + entry.getResourceUri());
+                continue;
+            }
             if (entry.getName().contains(partialFilename)) {
                 return true;
             }
