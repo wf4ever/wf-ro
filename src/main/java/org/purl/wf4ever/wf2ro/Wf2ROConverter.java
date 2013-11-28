@@ -219,8 +219,11 @@ public abstract class Wf2ROConverter {
                 
                 // We'll use a slightly nicer name that includes the hostname
                 String name = wsURI.getHost() + "-" + uuid;                               
-                // Add relation
-                Resource resource = aggregateExternal(ro, wsURI);
+                // aggregate if needed
+                Resource resource = ro.getResource(wsURI);
+                if (resource == null) {
+                    resource = aggregateExternal(ro, wsURI);
+                }
                 
                 addToFolder(folder, resource, name);
                 // FIXME: What is the link relation going to be?
