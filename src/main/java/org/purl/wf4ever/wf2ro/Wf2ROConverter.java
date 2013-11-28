@@ -213,18 +213,18 @@ public abstract class Wf2ROConverter {
                 UUID uuid = UUIDTool.namespaceUUID(wsURI);
                 
                 if (hasFolderEntryWithNameContaining(folder, uuid.toString())) {
-                    // Already exists
+                    // Already exists in this folder
                     continue;
                 }
                 
-                // We'll use a slightly nicer name that includes the hostname
-                String name = wsURI.getHost() + "-" + uuid;                               
                 // aggregate if needed
                 Resource resource = ro.getResource(wsURI);
                 if (resource == null) {
                     resource = aggregateExternal(ro, wsURI);
                 }
                 
+                // We'll use a slightly nicer name that includes the hostname
+                String name = wsURI.getHost() + "-" + uuid;                               
                 addToFolder(folder, resource, name);
                 // FIXME: What is the link relation going to be?
                 //addLinkAnnotation(ro, originalWfUri, resource, null);                    
@@ -239,7 +239,7 @@ public abstract class Wf2ROConverter {
             return false;
         }
         if (! folder.isLoaded()) {
-            folder.load(false);            
+            folder.load();            
         }
         for (FolderEntry entry : folder.getFolderEntries().values()) {
             if (entry.getName() == null) {
@@ -269,7 +269,7 @@ public abstract class Wf2ROConverter {
     
     private Resource getFolderEntry(Folder folder, String entryName) throws ROSRSException {
         if (! folder.isLoaded()) {
-            folder.load(false);            
+            folder.load();            
         }
         for (FolderEntry entry : folder.getFolderEntries().values()) {
             if (entry.getName().equals(entryName)) {
@@ -346,7 +346,7 @@ public abstract class Wf2ROConverter {
 
     private void addToFolder(Folder folder, Resource resource, String entryName) throws ROSRSException, ROException {
         if (! folder.isLoaded()) {
-            folder.load(false);
+            folder.load();
         }
         folder.addEntry(resource, entryName);
     }
