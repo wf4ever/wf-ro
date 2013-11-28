@@ -13,6 +13,7 @@ import java.util.UUID;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.log4j.Logger;
+import org.mockito.Mockito;
 import org.purl.wf4ever.rosrs.client.Annotable;
 import org.purl.wf4ever.rosrs.client.Annotation;
 import org.purl.wf4ever.rosrs.client.Folder;
@@ -259,6 +260,15 @@ public class MockupWf2ROConverter extends Wf2ROConverter {
     @Override
     public Folder getExtractServices() {
         return extractServices;
+    }
+
+
+    @Override
+    protected org.purl.wf4ever.rosrs.client.Resource aggregateExternal(
+            ResearchObject ro, URI external) throws ROSRSException {
+        org.purl.wf4ever.rosrs.client.Resource mock = Mockito.mock(org.purl.wf4ever.rosrs.client.Resource.class);
+        Mockito.when(mock.getUri()).thenReturn(external);
+        return (org.purl.wf4ever.rosrs.client.Resource) mock;
     }
 
 }

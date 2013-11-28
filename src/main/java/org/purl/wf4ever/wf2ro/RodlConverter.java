@@ -213,5 +213,11 @@ public class RodlConverter extends Wf2ROConverter {
         return ".ro/" + targetName + "-" + randomBit + ".ttl";
     }
 
+
+    @Override
+    protected Resource aggregateExternal(ResearchObject ro, URI external) throws ROSRSException {
+        return Resource.create(ro, external);
+    }
+
     
 }

@@ -43,6 +43,7 @@ import uk.org.taverna.scufl2.api.io.WriterException;
 import uk.org.taverna.scufl2.api.profiles.Profile;
 import uk.org.taverna.scufl2.rdfxml.RDFXMLReader;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.Property;
@@ -153,6 +154,7 @@ public abstract class Wf2ROConverter {
         }
         uploadNestedWorkflows(ro);
         uploadScripts(ro);
+        uploadWebServices(ro);
     }
 
     private void uploadScripts(ResearchObject ro) throws IOException, ROSRSException, ROException {
@@ -188,6 +190,52 @@ public abstract class Wf2ROConverter {
             }
         }
     }
+    
+
+    private void uploadWebServices(ResearchObject ro) throws IOException, ROSRSException, ROException {
+        Folder folder = getExtractScripts();
+        if (folder == null) {
+            return;
+        }
+        for (Profile p : wfbundle.getProfiles()) {
+            for (Configuration conf : p.getConfigurations()) {
+                String ws = "";
+                for (String key : Arrays.asList("wsdl", "endpoint")) {
+                    ws = conf.getJson().path(key).asText();
+                    if (! ws.isEmpty()) {
+                        break;
+                    }
+                }
+                if (ws.isEmpty()) {
+                    ws = conf.getJson().path("request").path("absoluteURITemplate").asText();
+                    ws = ws.replaceAll("{.*", "");
+                } 
+                if (ws.isEmpty()) {
+                    continue;
+                }
+                // Find unique identifier for ws - we'll convert to UUID
+                URI wsURI = URI.create(ws);
+                UUID uuid = UUIDTool.namespaceUUID(wsURI);
+                
+                if (hasFolderEntryWithNameContaining(folder, uuid.toString())) {
+                    // Already exists
+                    continue;
+                }
+                
+                // We'll use a slightly nicer name that includes the hostname
+                String name = wsURI.getHost() + "-" + uuid;
+                URI slug = slugForFolder(ro, folder).resolve(name);                
+                // Add relation
+                Resource resource = aggregateExternal(ro, wsURI);
+                
+                addToFolder(folder, resource, name);
+                // FIXME: What is the link relation going to be?
+                //addLinkAnnotation(ro, originalWfUri, resource, null);                    
+            }
+        }
+    }
+
+    protected abstract Resource aggregateExternal(ResearchObject ro, URI external) throws ROSRSException;
 
     private boolean hasFolderEntryWithNameContaining(Folder folder, String partialFilename) throws ROSRSException {
         if (partialFilename.isEmpty()) {
