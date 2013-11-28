@@ -6,8 +6,6 @@ package org.purl.wf4ever.wf2ro;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.UUID;
 
 import org.apache.log4j.Logger;

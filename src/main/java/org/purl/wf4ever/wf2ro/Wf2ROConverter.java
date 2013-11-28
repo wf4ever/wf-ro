@@ -189,8 +189,8 @@ public abstract class Wf2ROConverter {
     }
     
 
-    private void uploadWebServices(ResearchObject ro) throws IOException, ROSRSException, ROException {
-        Folder folder = getExtractScripts();
+    protected void uploadWebServices(ResearchObject ro) throws IOException, ROSRSException, ROException {
+        Folder folder = getExtractServices();
         if (folder == null) {
             return;
         }
@@ -220,8 +220,7 @@ public abstract class Wf2ROConverter {
                 }
                 
                 // We'll use a slightly nicer name that includes the hostname
-                String name = wsURI.getHost() + "-" + uuid;
-                URI slug = slugForFolder(ro, folder).resolve(name);                
+                String name = wsURI.getHost() + "-" + uuid;                               
                 // Add relation
                 Resource resource = aggregateExternal(ro, wsURI);
                 
