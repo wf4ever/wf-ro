@@ -197,11 +197,9 @@ public abstract class Wf2ROConverter {
         for (Profile p : wfbundle.getProfiles()) {
             for (Configuration conf : p.getConfigurations()) {
                 String ws = "";
-                for (String key : Arrays.asList("wsdl", "endpoint")) {
-                    ws = conf.getJson().path(key).asText();
-                    if (! ws.isEmpty()) {
-                        break;
-                    }
+                ws = conf.getJson().path("operation").path("wsdl").asText();
+                if (ws.isEmpty()) {
+                    ws = conf.getJson().path("endpoint").asText();
                 }
                 if (ws.isEmpty()) {
                     ws = conf.getJson().path("request").path("absoluteURITemplate").asText();
