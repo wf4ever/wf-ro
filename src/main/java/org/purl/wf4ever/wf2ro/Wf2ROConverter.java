@@ -14,7 +14,6 @@ import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -42,6 +41,7 @@ import uk.org.taverna.scufl2.api.io.WriterException;
 import uk.org.taverna.scufl2.api.profiles.Profile;
 import uk.org.taverna.scufl2.rdfxml.RDFXMLReader;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.Property;
@@ -197,14 +197,22 @@ public abstract class Wf2ROConverter {
         for (Profile p : wfbundle.getProfiles()) {
             for (Configuration conf : p.getConfigurations()) {
                 String ws = "";
-                ws = conf.getJson().path("operation").path("wsdl").asText();
-                if (ws.isEmpty()) {
-                    ws = conf.getJson().path("endpoint").asText();
-                }
-                if (ws.isEmpty()) {
-                    ws = conf.getJson().path("request").path("absoluteURITemplate").asText();
+                JsonNode json = conf.getJson();
+                switch(conf.getType().toString()) {
+                case "http://ns.taverna.org.uk/2010/activity/wsdl#Config":
+                    ws = json.path("operation").path("wsdl").asText();
+                    break;
+                case "http://ns.taverna.org.uk/2010/activity/soaplab#Config":
+                    ws = json.path("endpoint").asText();
+                    break;
+                case "http://ns.taverna.org.uk/2010/activity/rest#Config":
+                    ws = json.path("request")
+                            .path("absoluteURITemplate").asText();
                     ws = ws.replaceAll("\\{.*", "");
-                } 
+                    break;
+                }
+                // The ws string might be empty both from missing config
+                // or from wrong type. (asText returns "" as default) 
                 if (ws.isEmpty()) {
                     continue;
                 }
