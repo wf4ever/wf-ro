@@ -181,6 +181,17 @@ public class RodlConverter extends Wf2ROConverter {
     }
     
     @Override
+    public boolean isExtractNested() {
+        if (roURI.equals(extractNested)) {
+            // If the nested URI equals the RO, then we extract
+            // without adding to a folder
+            return true;
+        }
+        // Otherwise, only extract if non-null and exists
+        return super.isExtractNested();
+    }
+    
+    @Override
     public Folder getExtractScripts() {
         if (extractScripts == null) {
             return null;

@@ -317,6 +317,9 @@ public class RestApiTest extends JerseyTest {
         } else {
             webResource = resource().path("wf-ro/");
         }
+        if (true) {
+            throw new IllegalArgumentException(webResource + " ");
+        }
 
         Form f = new Form();
         f.add("resource", WF_URI);
@@ -440,7 +443,7 @@ public class RestApiTest extends JerseyTest {
         } else {
             webResource = resource().path("wf-ro/");
         }
-
+        System.out.println(webResource);
         JobConfig config = new JobConfig(WF_URI, TAVERNA_FORMAT, URI.create("http://this_is_an_incorrect_uri"), TOKEN, new JobExtractFolders());
 
         ClientResponse response = webResource.path("jobs").type(MediaType.APPLICATION_JSON_TYPE)

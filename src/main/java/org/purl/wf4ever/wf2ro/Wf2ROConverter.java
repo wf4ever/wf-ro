@@ -303,15 +303,16 @@ public abstract class Wf2ROConverter {
 
 
     private void uploadNestedWorkflows(ResearchObject ro) throws IOException, ROSRSException, WriterException, ROException {
-        Folder folder = getExtractNested();
-        if (folder == null) {
+        if (! isExtractNested()) {
             return;
         }
+        
         Workflow mainWf = wfbundle.getMainWorkflow();
         try {
-            for (Workflow otherWf : wfbundle.getWorkflows()) {
+             
+            workflowLoop: for (Workflow otherWf : wfbundle.getWorkflows()) {
                 if (otherWf == mainWf) {
-                   continue;
+                    continue;
                 }
                 // Cheaky way to save out nested workflows (and any of their
                 // nested wfs, annotations and configurations).
@@ -332,17 +333,36 @@ public abstract class Wf2ROConverter {
                     uuid = UUIDTool.namespaceUUID(otherWf.getIdentifier());
                 }            
                 
-                if (hasFolderEntryWithNameContaining(folder, uuid.toString())) {
-                    // Another workflow with the same id exists - first one wins
-                    continue;
-                }
+                String name = otherWf.getName() + "-" + uuid + ".wfbundle";                
+                String uniqueName = uuid.toString();
+                Folder folder = getExtractNested();
                 
-                // A long, but unique name 
-                String name = otherWf.getName() + "-" + uuid + ".wfbundle";
-                URI slug = slugForFolder(ro, folder).resolve(name);
-                Resource nestedWf = addWorkflowBundle(ro, wfbundle, slug.toString());
-                addToFolder(folder, nestedWf, name);                
-                addLinkAnnotation(ro, originalWfUri, nestedWf, otherWf.getIdentifier());
+                Resource nestedWf = null;
+                if (folder != null) {
+                    if (hasFolderEntryWithNameContaining(folder, uniqueName)) {
+                        // Another workflow with the same id exists - first one wins
+                        continue workflowLoop;
+                    }
+                    
+                    // A long, but unique name 
+                    URI slug = slugForFolder(ro, folder).resolve(name);
+                    nestedWf = addWorkflowBundle(ro, wfbundle, slug.toString());
+                    addToFolder(folder, nestedWf, name);                
+                    
+                } else {
+                    // Only aggregate, without folder
+                    // To check for duplicates we'll instead just look at the URI strings..
+                    for (URI resource : ro.getResources().keySet()) {
+                        if (resource.toString().contains(uniqueName)) {
+                            // Assume already aggregated
+                            continue workflowLoop;
+                        }
+                        nestedWf = addWorkflowBundle(ro, wfbundle, name);
+                    }
+                    if (nestedWf != null) {
+                        addLinkAnnotation(ro, originalWfUri, nestedWf, otherWf.getIdentifier());
+                    }
+                }
                 
             } 
         } finally {
@@ -351,6 +371,11 @@ public abstract class Wf2ROConverter {
         }
         
     }
+
+    public boolean isExtractNested() {
+        return getExtractNested() != null;
+    }
+
 
     private void addToFolder(Folder folder, Resource resource, String entryName) throws ROSRSException, ROException {
         if (! folder.isLoaded()) {
