@@ -333,8 +333,8 @@ public abstract class Wf2ROConverter {
                     uuid = UUIDTool.namespaceUUID(otherWf.getIdentifier());
                 }            
                 
-                String name = otherWf.getName() + "-" + uuid + ".wfbundle";                
                 String uniqueName = uuid.toString();
+                String name = otherWf.getName() + "-" + uniqueName + ".wfbundle";                
                 Folder folder = getExtractNested();
                 
                 Resource nestedWf = null;
