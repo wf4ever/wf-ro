@@ -20,6 +20,7 @@ import java.net.URI;
 import java.util.UUID;
 
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 
 import org.apache.commons.io.IOUtils;
@@ -118,9 +119,23 @@ public class RestApiTest extends JerseyTest {
     protected void setUpGetRo()
             throws IOException {
         InputStream manifest = getClass().getClassLoader().getResourceAsStream("rodl/manifest.rdf");
-        stubFor(get(urlMatching("/rodl/ROs/[12]/")).willReturn(
-            aResponse().withStatus(200).withHeader("Content-Type", "application/rdf+xml")
-                    .withBody(IOUtils.toByteArray(manifest))));
+        byte[] manifestBytes = IOUtils.toByteArray(manifest);
+        stubFor(get(urlMatching("/rodl/ROs/1/")).willReturn(
+                aResponse()
+                        .withStatus(200)
+                        .withHeader(HttpHeaders.CONTENT_TYPE,
+                                "application/rdf+xml")
+                        .withHeader(HttpHeaders.CONTENT_LOCATION,
+                                "/rodl/ROs/1/.ro/manifest.rdf")
+                        .withBody(manifestBytes)));
+        stubFor(get(urlMatching("/rodl/ROs/2/")).willReturn(
+                aResponse()
+                        .withStatus(200)
+                        .withHeader(HttpHeaders.CONTENT_TYPE,
+                                "application/rdf+xml")
+                        .withHeader(HttpHeaders.CONTENT_LOCATION,
+                                "/rodl/ROs/2/.ro/manifest.rdf")
+                        .withBody(manifestBytes)));
     }
 
 
