@@ -196,6 +196,7 @@ public abstract class Wf2ROConverter {
 						scriptStream, "text/plain");
 				addToFolder(folder, uploadedScript, name);
 				addLinkAnnotation(ro, originalWfUri, uploadedScript, null);
+				resourcesAdded.add(uploadedScript.getUri());
 			}
 		}
 	}
@@ -254,7 +255,7 @@ public abstract class Wf2ROConverter {
 				if (resource == null) {
 					resource = aggregateExternal(ro, wsURI);
 				}
-
+				resourcesAdded.add(resource.getUri());
 				// We'll use a slightly nicer name that includes the hostname
 				String name = wsURI.getHost() + "-" + uuid;
 				addToFolder(folder, resource, name);
@@ -393,6 +394,7 @@ public abstract class Wf2ROConverter {
 						addLinkAnnotation(ro, originalWfUri, nestedWf, otherWf.getIdentifier());
 					}
 				}
+				resourcesAdded.add(nestedWf.getUri());
 
 			}
 		} finally {
