@@ -224,6 +224,7 @@
 					<groups>org.purl.wf4ever.wf2ro.IntegrationTest</groups>
                     <systemPropertyVariables>
                         <jersey.test.host>localhost</jersey.test.host>
+                        <jersey.test.port>${jetty.port}</jersey.test.port>
                         <jersey.config.test.container.port>${jetty.port}</jersey.config.test.container.port>
                     </systemPropertyVariables>
 				</configuration>
@@ -253,6 +254,13 @@
 						<contextPath>/</contextPath>
 					</webApp>
 					<useTestScope>true</useTestScope>
+                    <connectors>
+                        <connector implementation="org.eclipse.jetty.server.nio.SelectChannelConnector">
+                            <port>${jetty.port}</port>
+                            <maxIdleTime>60000</maxIdleTime>
+                        </connector>
+                    </connectors>
+                    
 				</configuration>
 				<executions>
 					<execution>

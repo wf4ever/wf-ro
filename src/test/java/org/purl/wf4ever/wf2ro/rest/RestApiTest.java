@@ -42,6 +42,7 @@ import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.representation.Form;
 import com.sun.jersey.test.framework.JerseyTest;
+import com.sun.jersey.test.framework.spi.container.external.ExternalTestContainerFactory;
 
 /**
  * This test verifies the correctness of the REST API. It creates 2 jobs, one of which is cancelled. The other job is
@@ -190,8 +191,9 @@ public class RestApiTest extends JerseyTest {
     /**
      * Constructor.
      */
-    public RestApiTest() {
+    public RestApiTest() {        
         super("org.purl.wf4ever.wf2ro.rest");
+        setTestContainerFactory(new ExternalTestContainerFactory());
     }
 
 
