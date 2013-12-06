@@ -155,8 +155,7 @@ public abstract class Wf2ROConverter {
 	}
 
 	private void uploadScripts(ResearchObject ro) throws IOException, ROSRSException, ROException {
-		Folder folder = getExtractScripts();
-		if (!isExtractNested()) {
+		if (!isExtractScripts()) {
 			return;
 		}
 		for (Profile p : wfbundle.getProfiles()) {
@@ -168,7 +167,7 @@ public abstract class Wf2ROConverter {
 				}
 				// Find unique identifier for script - we'll hash its content
 				String sha = utf8sha(script);
-
+				Folder folder = getExtractScripts();
 				if (folder != null) {
 					if (hasFolderEntryWithNameContaining(folder, sha)) {
 						// Another workflow with the same id exists - first one
@@ -204,7 +203,7 @@ public abstract class Wf2ROConverter {
 	protected void uploadWebServices(ResearchObject ro) throws IOException, ROSRSException,
 			ROException {
 		Folder folder = getExtractServices();
-		if (!isExtractNested()) {
+		if (!isExtractServices()) {
 			return;
 		}
 		for (Profile p : wfbundle.getProfiles()) {
@@ -406,6 +405,14 @@ public abstract class Wf2ROConverter {
 
 	public boolean isExtractNested() {
 		return getExtractNested() != null;
+	}
+
+	public boolean isExtractScripts() {
+		return getExtractScripts() != null;
+	}
+
+	public boolean isExtractServices() {
+		return getExtractServices() != null;
 	}
 
 	private void addToFolder(Folder folder, Resource resource, String entryName)
