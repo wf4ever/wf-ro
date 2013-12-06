@@ -288,7 +288,11 @@ public abstract class Wf2ROConverter {
 	}
 
 	private URI slugForFolder(ResearchObject ro, Folder folder) {
-		URI slugBase = ro.getUri().relativize(folder.getUri());
+		URI uri = ro.getUri();
+		if (folder != null) {
+			uri = folder.getUri();
+		}
+		URI slugBase = ro.getUri().relativize(uri);
 		if (slugBase.isAbsolute()) {
 			// no common base
 			slugBase = URI.create("");
