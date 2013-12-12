@@ -197,7 +197,7 @@ public class RodlConverter extends Wf2ROConverter {
 			return true;
 		}
 		// Otherwise, only extract if non-null and exists
-		return super.isExtractNested();
+		return super.isExtractScripts();
 	}
 
 	@Override
@@ -208,7 +208,7 @@ public class RodlConverter extends Wf2ROConverter {
 			return true;
 		}
 		// Otherwise, only extract if non-null and exists
-		return super.isExtractNested();
+		return super.isExtractServices();
 	}
 
 	@Override
