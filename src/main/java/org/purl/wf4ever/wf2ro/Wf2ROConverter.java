@@ -115,7 +115,9 @@ public abstract class Wf2ROConverter {
 			running = true;
 		}
 		UUID wfUUID = getWorkflowBundleUUID(wfbundle);
-		String wfname = wfbundle.getMainWorkflow().getName() + ".wfbundle";
+	//	String wfname = wfbundle.getMainWorkflow().getName() + ".wfbundle";
+		String uniqueName = generateUniqName(wfbundle.getMainWorkflow());
+		String wfname = wfbundle.getMainWorkflow().getName() + "-" + uniqueName + ".wfbundle";
 		ResearchObject ro = createResearchObject(wfUUID);
 		Resource wfbundleAggregated = addWorkflowBundle(ro, wfbundle, wfname);
 		Folder mainFolder = getExtractMain();
@@ -351,6 +353,7 @@ public abstract class Wf2ROConverter {
 				wfbundle.setMainWorkflow(otherWf);
 
 				// Try to extract the UUID
+				/*
 				String id = Workflow.WORKFLOW_ROOT.relativize(otherWf.getIdentifier())
 						.toASCIIString().replace("/", "");
 				UUID uuid;
@@ -360,8 +363,9 @@ public abstract class Wf2ROConverter {
 					// Fallback, generate a name UUID from the URL
 					uuid = UUIDTool.namespaceUUID(otherWf.getIdentifier());
 				}
-
-				String uniqueName = uuid.toString();
+				*/
+				
+				String uniqueName = generateUniqName(otherWf);
 				String name = otherWf.getName() + "-" + uniqueName + ".wfbundle";
 				Folder folder = getExtractNested();
 
@@ -401,6 +405,23 @@ public abstract class Wf2ROConverter {
 			wfbundle.setMainWorkflow(mainWf);
 		}
 
+	}
+	
+	protected String generateUniqName(Workflow wf) {
+		// Try to extract the UUID
+		String id = Workflow.WORKFLOW_ROOT.relativize(wf.getIdentifier())
+				.toASCIIString().replace("/", "");
+		UUID uuid;
+		try {
+			uuid = UUID.fromString(id);
+		} catch (IllegalArgumentException ex) {
+			// Fallback, generate a name UUID from the URL
+			uuid = UUIDTool.namespaceUUID(wf.getIdentifier());
+		}
+		
+		String uniqueName = uuid.toString();
+		
+		return uniqueName;
 	}
 
 	public boolean isExtractNested() {
